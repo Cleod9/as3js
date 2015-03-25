@@ -2,6 +2,8 @@
 
 ----------
 
+[http://www.as3js.org](http://www.as3js.org)
+
 AS3JS is a simple command line tool written in Node.js that converts ActionScript 3.0 to JavaScript while leveraging two of my libraries: [OOPS.js](https://github.com/Cleod9/oopsjs) and [ImportJS](https://github.com/Cleod9/importjs). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a single JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
 
 So this tool was created with the following goals in mind: 
