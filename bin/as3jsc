@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 
 var fs = require('fs');
-var AS3JS = require('../index.js');
+var ImportJS = global.ImportJS = require('importjs');
+var OOPS = global.OOPS = require('oopsjs');
+require('../runtime.js');
+ImportJS.compile();
+var AS3JS = ImportJS.unpack("com.mcleodgaming.as3js.AS3JS");
 
-var VERSION = "0.0.1";
+var VERSION = "0.1.0";
 
 //AS3JS options
 var srcPaths = [];
@@ -33,7 +37,7 @@ for(var i = 0; i < process.argv.length; i++) {
 		}
 		option = null;
 	} else {
-		if(arg == '-v' || arg == '--verbose') {
+		if(arg == '--verbose') {
 			verbose = true;
 		} else if(arg == '-s' || arg == '--silent') {
 			silent = true;
@@ -53,7 +57,7 @@ for(var i = 0; i < process.argv.length; i++) {
 		} else if(arg == '-v' || arg == '--version') {
 			//Version info
 			console.log("AS3JS for Node.js");
-			console.log("Created by Greg McLeod (c) 2013");
+			console.log("Created by Greg McLeod (c) 2015");
 			console.log("Version: " + VERSION);
 			return;
 		}
@@ -66,10 +70,19 @@ if(srcPaths.length <= 0) {
 	console.log("Error, must supply output path (-o)");
 } else {
 	var as3js = new AS3JS();
-	as3js.compile({
+	var sourceText = as3js.compile({
 		srcPaths: srcPaths,
-		output: output,
 		silent: silent,
 		verbose: verbose
 	});
+	
+	//Remove old output file if it exists
+	if (output)
+	{
+		if (fs.existsSync(output))
+		{
+			fs.unlinkSync(output);
+		}
+		fs.writeFileSync(output || 'output.js', sourceText, "UTF-8", {flags: 'w+'});
+	}
 }

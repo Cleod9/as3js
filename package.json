@@ -1,6 +1,6 @@
 {
 	"name": "as3js",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"author": "Greg McLeod <cleod9@gmail.com>",
 	"description": "AS3 to JS converter for use with ImportJS and OOPS.js.",
 	"bin": {
@@ -9,7 +9,7 @@
 	"main": "./index.js",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/cleod9/node-importjs"
+		"url": "https://github.com/cleod9/as3js"
 	},
 	"keywords": [
 		"as3",
@@ -19,7 +19,8 @@
 		"oop"
 	],
 	"dependencies" : {
-		"oopsjs": "*"
+		"oopsjs": "1.1.2",
+		"importjs": "3.0.0"
 	},
 	"license": "MIT"
 }
