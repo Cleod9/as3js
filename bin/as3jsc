@@ -1,0 +1,75 @@
+#!/usr/bin/env node
+
+var fs = require('fs');
+var AS3JS = require('../index.js');
+
+var VERSION = "0.0.1";
+
+//AS3JS options
+var srcPaths = [];
+var output = null;
+var silent = false;
+var verbose = false;
+
+//Command line args
+var arg = null;
+var option = null;
+var command = null;
+
+//Misc options
+
+//Parse arguemnts
+for(var i = 0; i < process.argv.length; i++) {
+	arg = process.argv[i];
+	if(command) {
+		//Commands will go here if implemented
+		command = null;
+	} else if(option) {
+		//Options are set here
+		if(option == 'o') {
+			output = arg; //File output
+		} else if(option == 'src') {
+			srcPaths = srcPaths.concat(arg.split(",")); //Source path(s) to parse
+		}
+		option = null;
+	} else {
+		if(arg == '-v' || arg == '--verbose') {
+			verbose = true;
+		} else if(arg == '-s' || arg == '--silent') {
+			silent = true;
+		} else if(arg == '-o' || arg == '--output') {
+			option = 'o'; //File output
+		} else if(arg == '-src' || arg == '--sourcepath') {
+			option = 'src'; //Source path(s)
+		} else if(arg == '-h' || arg == '--help') {
+			//Help text
+			console.log("Options:");
+			console.log("\t[-o|--output]\t\tOutput file");
+			console.log("\t[-src|-sourcepath]\tSource Path(s) (comma-separated)");
+			console.log("\t[-h|--help]\t\tView Help");
+			console.log("\t[-v|--version]\t\tView Version information");
+			
+			return;
+		} else if(arg == '-v' || arg == '--version') {
+			//Version info
+			console.log("AS3JS for Node.js");
+			console.log("Created by Greg McLeod (c) 2013");
+			console.log("Version: " + VERSION);
+			return;
+		}
+	}
+}
+
+if(srcPaths.length <= 0) {
+	console.log("Error, must supply source path (-src)");
+} else if(!output) {
+	console.log("Error, must supply output path (-o)");
+} else {
+	var as3js = new AS3JS();
+	as3js.compile({
+		srcPaths: srcPaths,
+		output: output,
+		silent: silent,
+		verbose: verbose
+	});
+}
