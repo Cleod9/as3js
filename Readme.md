@@ -19,6 +19,7 @@ The best part about AS3JS is that even if you aren't familiar with AS3 you can s
 - Converts ActionScript 3.0 code into readable JavaScript output (Leveraging [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs))
 - Recursively parses directories for ActionScript files and automatically resolves import dependencies
 - Concatenation into a single .js file
+- Support for Vector type syntax (transpiles to a standard Array)
 - Support for the '*' wildcard symbol for imports
 - Support for AS3's default argument values and the "...rest" argument
 - Support for the "super" keyword up to the parent level
@@ -136,7 +137,7 @@ AS3JS will not validate your types during compile time or runtime. I may add som
 I hope to work on this soon, but currently you can't write statements like this:
 
 ```actionscript
-"var a:Type, b:Type, c:Type = 4";
+var a:Type, b:Type, c:Type = 4;
 ```
 If you remove the types it will work fine, but I have not yet implemented anything to strip the types from this type of statement.
 
@@ -171,8 +172,12 @@ var other:SomeOtherType = new SomeOtherType();
 var foo:TypeIWant = other;
 ```
 
+### No `is` support ###
 
-## \*Disclaimer\*##
+Currently there is no support for type checking via the `is` operator (e.g. `val is Type`) Just stick with `instanceof` for now.
+
+
+## \*Disclaimer\* ##
 
 **AS3JS cannot currently convert *all* AS3 to proper JS.** While I have put a ton of effort into allowing it to convert 99% of AS3 syntax into JavaScript, the languages are still fundamentally different. There are several things that I have yet to handle, such as casting via the `as` operator, or forcefully binding event callbacks to class instances. This tool is not perfect, however it is quite able to handle a full-fledged personal project. You'll find that  sometimes after compiling without errors there may still be some minor syntax issues in the output, however nearly all of these issues can be avoided very easily with a few code tweaks in your AS3 and are easy to catch (See "Limitations" listed above).
 
