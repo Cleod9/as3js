@@ -1435,6 +1435,7 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 					{
 						if (currToken.token == 'this')
 						{
+							//No need to perform any extra checks on the subsequent token
 							tmpStatic = false;
 							tmpClass = cls;
 							objBuffer += currToken.token;
@@ -1445,7 +1446,7 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 							
 							//Find field in class, then make sure we didn't already have a local member defined with this name, and skip next block if static since the definition is the class itself
 							//Note: tmpMember needs to be checked, if something is in there it means we have a variable with the same name in local scope
-							if (cls.retrieveField(currToken.token, tmpStatic) && cls.className != currToken.token && !tmpMember)
+							if (cls.retrieveField(currToken.token, tmpStatic) && cls.className != currToken.token && !tmpMember && !(prevToken && prevToken.token === "var"))
 							{
 								tmpMember = cls.retrieveField(currToken.token, tmpStatic); //<-Reconciles the type of the current variable
 								if (tmpMember && (tmpMember.subType == 'get' || tmpMember.subType == 'set'))
@@ -1520,8 +1521,8 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 									result += currToken.token;
 								} else
 								{
-									objBuffer += (cls.retrieveField(currToken.token, false) && !tmpMember) ? 'this.' + currToken.token : currToken.token;
-									result += (cls.retrieveField(currToken.token, false) && !tmpMember) ? 'this.' + currToken.token : currToken.token;
+									objBuffer += (cls.retrieveField(currToken.token, false) && !tmpMember && !(prevToken && prevToken.token === "var")) ? 'this.' + currToken.token : currToken.token;
+									result += (cls.retrieveField(currToken.token, false) && !tmpMember && !(prevToken && prevToken.token === "var")) ? 'this.' + currToken.token : currToken.token;
 								}
 							}
 							if (tmpStatic)
@@ -1547,6 +1548,13 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 							}
 						}
 						//Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
+						
+						if (prevToken && prevToken.token === "var")
+						{
+							//If this had a variable declaration before it, we want to just go parse the next token
+							result += fnText.charAt(index);
+							continue;
+						}
 						
 						//We have parsed the current token, and the index sits at the next level down in the object
 						for (; index < fnText.length; index++)

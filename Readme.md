@@ -32,8 +32,8 @@ The best part about AS3JS is that even if you aren't familiar with AS3 you can s
 **Installation Requirements:**
 
 - [Node.js](http://nodejs.org/)
-- [ImportJS for Node](https://github.com/Cleod9/node-importjs)
-- [OOPS.js for Node](https://github.com/Cleod9/node-oopsjs)
+- [ImportJS for Node.js](https://github.com/Cleod9/node-importjs) or for [Browser](https://github.com/Cleod9/importjs)
+- [OOPS.js for Node/js](https://github.com/Cleod9/node-oopsjs) or for [Browser](https://github.com/Cleod9/oopsjs)
 
 So the first thing you need in order to use this application is Node.js:
 
@@ -63,11 +63,16 @@ AS3JS is run by typing in the command `as3js` in your command-line window. This 
 
 `-o`, `--output`: Path where the output file will be written (e.g. C:\Documents\output.js)
 
-`-src`, `--source`: Comma-delimited list of paths to pull source .as files from. It is expected that this path be the root of your project's package directory. So for example, if you defined a package such as `com.myproject`, you would want this value to be the folder that contains the `com` directory. Rememember that AS3JS processes folders recursively, so you only need to put the path to your top-level folders.
+`-src`, `--sourcepath`: Comma-delimited list of paths to pull source .as files from. It is expected that this path be the root of your project's package directory. So for example, if you defined a package such as `com.myproject`, you would want this value to be the folder that contains the `com` directory. Remember that AS3JS processes folders recursively, so you only need to put the path to your top-level folders.
 
 `-h`, `--help`: Outputs help information.
 
 `-v`,`--version`: Outputs version information.
+
+`-s`,`--silent`: Flag to completely silence AS3JS output.
+
+`--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
+
 
 Here is an example command:
 
@@ -75,7 +80,7 @@ Here is an example command:
 $ as3js -src ./myas3 -o ./output.js
 ```
 
-The above example recursievly browses through the directory `myas3` finding all `.as` files, converts them to JS, and finally combines the results into a file called `output.js` in the working directory. Simple as that!
+The above example recursively browses through the directory `myas3` finding all `.as` files, converts them to JS, and finally combines the results into a file called `output.js` in the working directory. Simple as that!
 
 ## Examples ##
 
@@ -125,7 +130,7 @@ There is currently no "true" encapsulation support in AS3JS. Private/protected c
 AS3JS does not currently support chaining `super` (i.e. `super.super.super.fn()`). If you need such a feature, you can achieve this by using JavaScript in your code:
 
 ```actionscript
-GreatGrandfather.prototype.execute.call(this, arg1, arg2... etc);
+GreatGrandfather.prototype.fn.call(this, arg1, arg2... etc);
 ```
 
 ### No type validation ###
