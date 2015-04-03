@@ -1549,10 +1549,14 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 						}
 						//Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
 						
-						if (prevToken && prevToken.token === "var")
+						//If this had a variable declaration before it, we will add it to the local var stack and move on to the next token
+						if (prevToken && prevToken.token === "var" && cls.retrieveField(currToken.token, tmpStatic))
 						{
-							//If this had a variable declaration before it, we want to just go parse the next token
+							//Appends current character index to the result, add dummy var to stack, and move on
 							result += fnText.charAt(index);
+							var localVar = new AS3Member();
+							localVar.name = currToken.token;
+							stack.push(localVar); //<-Ensures we don't add "this." or anything in front of this variable anymore
 							continue;
 						}
 						
