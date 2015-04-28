@@ -181,6 +181,14 @@ var foo:TypeIWant = other;
 
 Currently there is no support for type checking via the `is` operator (e.g. `val is Type`) Just stick with `instanceof` for now.
 
+### No `Embed` support ###
+
+Resource embedding is specific to the Flash platform, so I have no plans to implement it at this time.
+
+### Restricted regex support ###
+
+The parser is currently unable to recognize the start and end of a regular expression literal (e.g. `/pattern/`). As such, characters such as `"`, `'`, `{`, `}`, and other patterns may confuse the parser. A simple workaround for this is to use the `RegExp` constructor to define regular expressions that contain these characters (e.g. `new RegExp("pattern")`)
+
 
 ## \*Disclaimer\* ##
 

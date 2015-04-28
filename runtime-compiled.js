@@ -988,11 +988,13 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 		AS3Member = this.import('com.mcleodgaming.as3js.types.AS3Member');
 		AS3Variable = this.import('com.mcleodgaming.as3js.types.AS3Variable');
 		AS3JSUtils = this.import('com.mcleodgaming.as3js.util.AS3JSUtils');
+		AS3Parser.PREVIOUS_BLOCK = null;
 	});
 
 	var AS3Parser = OOPS.extend({
 		_statics_: {
-			increaseIndent: function(str, amount, from) {
+			PREVIOUS_BLOCK: null,
+		increaseIndent: function(str, amount, from) {
 			return str;
 		},
 		parseArguments: function(str) {
@@ -1207,13 +1209,13 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 			}
 			if (!started)
 			{
-				throw new Error("Error, no starting '" + opening  + "' found for method");
+				throw new Error("Error, no starting '" + opening  + "' found for method body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			} else if (count > 0)
 			{
-				throw new Error("Error, no closing '" + closing  + "' found for method");
+				throw new Error("Error, no closing '" + closing  + "' found for method body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			} else if (count < 0)
 			{
-				throw new Error("Error, malformed enclosing '" + opening + closing);
+				throw new Error("Error, malformed enclosing '" + opening + closing + " body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			}
 			return [buffer, i];
 		},
@@ -1869,6 +1871,7 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 						AS3JS.debug('Attempting to parse class...');
 						
 						//Extract out the next method block
+						AS3Parser.PREVIOUS_BLOCK = cls.className + ":Class";
 						tmpStr = AS3Parser.extractBlock(src, index)[0];
 						index += tmpStr.length - 1;
 						
@@ -1949,7 +1952,8 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 					index = currToken.index;
 					currMember.name = currToken.token; //Set the member name
 					AS3JS.debug('****>Function name declared: ' + currToken.token);
-
+					
+					AS3Parser.PREVIOUS_BLOCK = currMember.name + ":Function";
 					tmpArr = AS3Parser.extractBlock(src, index, '(', ')');
 					index = tmpArr[1] - 1; //Ending index of parsed block
 					tmpStr = tmpArr[0].trim(); //Parsed block
@@ -2035,6 +2039,7 @@ ImportJS.pack('com.mcleodgaming.as3js.parser.AS3Parser', function(module, export
 					} else
 					{
 						//Save the function body
+						AS3Parser.PREVIOUS_BLOCK = currMember.name + ":Function";
 						tmpArr = AS3Parser.extractBlock(src, index);
 						index = tmpArr[1];
 						currMember.value = tmpArr[0].trim();

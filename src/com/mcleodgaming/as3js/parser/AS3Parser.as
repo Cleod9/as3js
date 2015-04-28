@@ -9,6 +9,12 @@ package com.mcleodgaming.as3js.parser
 	
 	public class AS3Parser 
 	{
+		/**
+		 * Keeps track of previous function name to assist extractBlock() debugging
+		 * TODO: This could definitely be implemented better
+		 */
+		public static var PREVIOUS_BLOCK:String;
+		
 		//public var index:int;
 		public var stack:Array;
 		public var src:String;
@@ -242,13 +248,13 @@ package com.mcleodgaming.as3js.parser
 			}
 			if (!started)
 			{
-				throw new Error("Error, no starting '" + opening  + "' found for method");
+				throw new Error("Error, no starting '" + opening  + "' found for method body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			} else if (count > 0)
 			{
-				throw new Error("Error, no closing '" + closing  + "' found for method");
+				throw new Error("Error, no closing '" + closing  + "' found for method body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			} else if (count < 0)
 			{
-				throw new Error("Error, malformed enclosing '" + opening + closing);
+				throw new Error("Error, malformed enclosing '" + opening + closing + " body while parsing " + AS3Parser.PREVIOUS_BLOCK);
 			}
 			return [buffer, i];
 		}
@@ -435,6 +441,7 @@ package com.mcleodgaming.as3js.parser
 						AS3JS.debug('Attempting to parse class...');
 						
 						//Extract out the next method block
+						AS3Parser.PREVIOUS_BLOCK = cls.className + ":Class";
 						tmpStr = AS3Parser.extractBlock(src, index)[0];
 						index += tmpStr.length - 1;
 						
@@ -515,7 +522,8 @@ package com.mcleodgaming.as3js.parser
 					index = currToken.index;
 					currMember.name = currToken.token; //Set the member name
 					AS3JS.debug('****>Function name declared: ' + currToken.token);
-
+					
+					AS3Parser.PREVIOUS_BLOCK = currMember.name + ":Function";
 					tmpArr = AS3Parser.extractBlock(src, index, '(', ')');
 					index = tmpArr[1] - 1; //Ending index of parsed block
 					tmpStr = tmpArr[0].trim(); //Parsed block
@@ -601,6 +609,7 @@ package com.mcleodgaming.as3js.parser
 					} else
 					{
 						//Save the function body
+						AS3Parser.PREVIOUS_BLOCK = currMember.name + ":Function";
 						tmpArr = AS3Parser.extractBlock(src, index);
 						index = tmpArr[1];
 						currMember.value = tmpArr[0].trim();
