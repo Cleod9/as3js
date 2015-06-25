@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+//Fix CWD for global script
+process.env.INIT_CWD = process.cwd();
+
 var pjson = require('../package.json');
 var fs = require('fs');
 var ImportJS = global.ImportJS = require('importjs');

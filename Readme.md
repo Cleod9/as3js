@@ -121,9 +121,9 @@ package {
 	}
 }
 ```
-### No Privates ###
+### No True Privates ###
 
-There is currently no "true" encapsulation support in AS3JS. Private/protected class properties and methods remain public on any instantiated objects. I gave a lot of thought to this and went over many potential solutions. I came to the conclusion that while encapsulation is convenient, in the open world of JavaScript all of this data is easily accessible through basic browser debugging tools. As such, I have no plans to add true encapsulation to AS3JS. The good news is that you can still use the keywords and your IDE won't be able to tell the difference.
+While you can use any of the encapsulation keywords you'd like, there is currently no "true" encapsulation support in AS3JS. Private/protected class properties and methods remain publicly accessible on any instantiated objects. I gave a lot of thought to this and went over many potential solutions. I came to the conclusion that while encapsulation is convenient, in the open world of JavaScript all of this data is easily accessible through basic browser debugging tools. As such, I have no plans to add true encapsulation to AS3JS. The good news is that you can still use the keywords and AS3JS will simply strip them out.
 
 ### No Chaining super() ###
 
