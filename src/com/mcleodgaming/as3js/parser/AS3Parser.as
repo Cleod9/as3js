@@ -3,7 +3,6 @@ package com.mcleodgaming.as3js.parser
 	import com.mcleodgaming.as3js.AS3JS;
 	import com.mcleodgaming.as3js.enums.*;
 	import com.mcleodgaming.as3js.types.*;
-	import com.mcleodgaming.as3js.util.*;
 	require "path"
 	require "fs"
 	
@@ -28,9 +27,9 @@ package com.mcleodgaming.as3js.parser
 			packageName = pkg || null;
 		}
 		
-		public static function increaseIndent(str:String, amount:int, from:int):String
+		public static function increaseIndent(str:String, indent:String):String
 		{
-			return str;
+			return (indent + str).replace(/\n/g, "\n" + indent);
 		}
 		public static function parseArguments(str:String):Array
 		{

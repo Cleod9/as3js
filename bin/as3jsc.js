@@ -2,11 +2,7 @@
 
 var pjson = require('../package.json');
 var fs = require('fs');
-var ImportJS = global.ImportJS = require('importjs');
-var OOPS = global.OOPS = require('oopsjs');
-require('../runtime.js');
-ImportJS.compile();
-var AS3JS = ImportJS.unpack("com.mcleodgaming.as3js.AS3JS");
+var AS3JS = require('../runtime.js');
 
 var VERSION = pjson.version;
 
@@ -15,6 +11,7 @@ var srcPaths = [];
 var output = null;
 var silent = false;
 var verbose = false;
+var entry = null;
 
 //Command line args
 var arg = null;
@@ -35,6 +32,8 @@ for(var i = 0; i < process.argv.length; i++) {
 			output = arg; //File output
 		} else if(option == 'src') {
 			srcPaths = srcPaths.concat(arg.split(",")); //Source path(s) to parse
+		} else if(option == 'e') {
+			entry = arg;
 		}
 		option = null;
 	} else {
@@ -46,11 +45,14 @@ for(var i = 0; i < process.argv.length; i++) {
 			option = 'o'; //File output
 		} else if(arg == '-src' || arg == '--sourcepath') {
 			option = 'src'; //Source path(s)
+		} else if(arg == '-e' || arg == '--entry') {
+			option = 'e'; //Entry point
 		} else if(arg == '-h' || arg == '--help') {
 			//Help text
 			console.log("Options:");
 			console.log("\t[-o|--output]\t\tOutput file");
 			console.log("\t[-src|-sourcepath]\tSource Path(s) (comma-separated)");
+			console.log("\t[-e|--entry]\t\tEntry point (ex. \"[new|exports]:com.example.MyClass\")");
 			console.log("\t[-h|--help]\t\tView Help");
 			console.log("\t[-v|--version]\t\tView Version information");
 			
@@ -74,7 +76,8 @@ if(srcPaths.length <= 0) {
 	var sourceText = as3js.compile({
 		srcPaths: srcPaths,
 		silent: silent,
-		verbose: verbose
+		verbose: verbose,
+		entry: entry
 	});
 	
 	//Remove old output file if it exists

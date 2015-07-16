@@ -3,7 +3,6 @@ package com.mcleodgaming.as3js.parser
 	import com.mcleodgaming.as3js.AS3JS;
 	import com.mcleodgaming.as3js.enums.*;
 	import com.mcleodgaming.as3js.types.*;
-	import com.mcleodgaming.as3js.util.*;
 	
 	public class AS3Class 
 	{
@@ -27,9 +26,10 @@ package com.mcleodgaming.as3js.parser
 		public var staticGetters:Vector.<AS3Member>;
 		public var staticSetters:Vector.<AS3Member>;
 		public var isInterface:Boolean;
-		public var fieldMap:Object;
-		public var staticFieldMap:Object;
-		public var importMap:Object;
+		public var fieldMap:Object; //Maps instance field names to instance members
+		public var staticFieldMap:Object; //Maps static field names to static members
+		public var importMap:Object; //Maps class shorthand name to class
+		public var classMap:Object; //Maps full package path to class
 			
 		public function AS3Class() 
 		{
@@ -51,10 +51,10 @@ package com.mcleodgaming.as3js.parser
 			isInterface = false;
 			fieldMap = {};
 			staticFieldMap = {};
-			importMap = {};
+			importMap = { };
+			classMap = { };
 		}
-		
-		public function registerImports(clsList:Vector.<AS3Class>):void
+		public function registerImports(clsList:Object):void
 		{
 			var i;
 			for (i in imports)
@@ -75,6 +75,7 @@ package com.mcleodgaming.as3js.parser
 					importMap[shorthand] = clsList[importExtras[i]];
 				}
 			}
+			classMap = clsList;
 		}
 		public function registerField(name:String, value:AS3Member):void
 		{
@@ -336,15 +337,14 @@ package com.mcleodgaming.as3js.parser
 			if (fn instanceof AS3Function)
 			{
 				//Functions need to be handled differently
-				buffer += "\t\t";
 				//Prepend sub-type if it exists
 				if (fn.subType)
 				{
 					buffer += fn.subType + '_';
 				}
 				//Print out the rest of the name and start the function definition
-				buffer += (fn.name == className) ? "_constructor_" : fn.name
-				buffer += ": function(";
+				buffer += fn.name
+				buffer += " = function(";
 				//Concat all of the arguments together
 				tmpArr = [];
 				for (j = 0; j < fn.argList.length; j++)
@@ -356,13 +356,12 @@ package com.mcleodgaming.as3js.parser
 				}
 				buffer += tmpArr.join(", ") + ") ";
 				//Function definition is finally added
-				buffer += fn.value + ",\n";
+				buffer += fn.value + ";\n";
 			} else if (fn instanceof AS3Variable)
 			{
-				buffer += "\t\t";
 				//Variables can be added immediately
 				buffer += fn.name;
-				buffer += ": " + fn.value + ",\n";
+				buffer += " = " + fn.value + ";\n";
 			}
 			return buffer;
 		}
@@ -468,7 +467,7 @@ package com.mcleodgaming.as3js.parser
 				allFuncs[i].value = AS3Parser.cleanup(allFuncs[i].value);
 				//Fix supers
 				allFuncs[i].value = allFuncs[i].value.replace(/super\.(.*?)\(/g, parent + '.prototype.$1.call(this, ').replace(/\.call\(this,\s*\)/g, ".call(this)");
-				allFuncs[i].value = allFuncs[i].value.replace(/super\(/g, parent + '.prototype._constructor_.call(this, ').replace(/\.call\(this,\s*\)/g, ".call(this)");
+				allFuncs[i].value = allFuncs[i].value.replace(/super\(/g, parent + '.call(this, ').replace(/\.call\(this,\s*\)/g, ".call(this)");
 				allFuncs[i].value = allFuncs[i].value.replace(new RegExp("this[.]" + parent, "g"), parent); //Fix extra 'this' on the parent
 			}
 			for (i in allStaticFuncs)
@@ -481,16 +480,16 @@ package com.mcleodgaming.as3js.parser
 		}
 		public function toString():String
 		{
-			//Outputs the class in JS format
+			//Outputs the class inside a JS function
 			var i:*;
 			var j:*;
-			var buffer:String = "ImportJS.pack('" + packageName + '.' + className + "', function(module, exports) {\n";
-			
+			var buffer:String = "";
+
 			if (requires.length > 0)
 			{
 				for (var i in requires)
 				{
-					buffer += '\tvar ' + requires[i].substring(1, requires[i].length-1) + ' = require(' + requires[i] + ');\n';
+					buffer += 'var ' + requires[i].substring(1, requires[i].length-1) + ' = require(' + requires[i] + ');\n';
 				}
 				buffer += "\n";
 			}
@@ -500,7 +499,7 @@ package com.mcleodgaming.as3js.parser
 			//Parent class must be imported if it exists
 			if (parentDefinition)
 			{
-				buffer += "\tvar " + parentDefinition.className + " = this.import('" + parentDefinition.packageName + "." + parentDefinition.className + "');\n";
+				buffer += "var " + parentDefinition.className + " = imports('" + parentDefinition.packageName + "', '" + parentDefinition.className + "');\n";
 			}
 
 			//Create refs for all the other classes
@@ -511,13 +510,13 @@ package com.mcleodgaming.as3js.parser
 				{
 					if (imports[i].indexOf('flash.') < 0 && parent != imports[i].substr(imports[i].lastIndexOf('.') + 1) && packageName + '.' + className != imports[i]) //Ignore flash imports
 					{
-						tmpArr.push(imports[i].substr(imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire tring
+						tmpArr.push(imports[i].substr(imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
 					}
 				}
 				//Join up separated by commas
 				if (tmpArr.length > 0)
 				{
-					buffer += '\tvar ';
+					buffer += 'var ';
 					buffer += tmpArr.join(", ") + ";\n";
 				}
 			}
@@ -525,9 +524,9 @@ package com.mcleodgaming.as3js.parser
 			var injectedText = "";
 			for (i in imports)
 			{
-				if (imports[i].indexOf('flash.') < 0 && packageName + '.' + className != imports[i]) //Ignore flash imports
+				if (imports[i].indexOf('flash.') < 0 && packageName + '.' + className != imports[i] && !(parentDefinition && parentDefinition.packageName + '.' + parentDefinition.className == imports[i])) //Ignore flash imports and parent for injections
 				{
-					injectedText += "\t\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = this.import('" + imports[i] + "');\n";
+					injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = imports('" + classMap[imports[i]].packageName + "', '" + classMap[imports[i]].className + "');\n";
 				}
 			}
 			//Set the non-native statics vars now
@@ -535,97 +534,107 @@ package com.mcleodgaming.as3js.parser
 			{
 				if (!(staticMembers[i] instanceof AS3Function))
 				{
-					injectedText += AS3Parser.cleanup('\t\t' + className + '.' + staticMembers[i].name + ' = ' + staticMembers[i].value + ";\n");
+					injectedText += "\t" + AS3Parser.cleanup( className + '.' + staticMembers[i].name + ' = ' + staticMembers[i].value + ";\n");
 				}
 			}
 			
 			if (injectedText.length > 0)
 			{
-				buffer += "\tthis.inject(function () {\n";
+				buffer += "module.inject = function () {\n";
 				buffer += injectedText;
-				buffer += "\t});\n";
+				buffer += "};\n";
 			}
 
 			buffer += '\n';
 			
-			buffer += "\tvar " + className + " = ";
-			buffer += (parent) ? parent : "OOPS";
-			buffer += ".extend({\n";
-
+			buffer += (fieldMap[className]) ? "var " + stringifyFunc(fieldMap[className]) : "var " + className + " = function " + className + "() {};";
+			
+			buffer += '\n';
+			
+			if (parent)
+			{
+				//Extend parent if necessary
+				buffer += className + ".prototype = Object.create(" + parent + ".prototype);";
+			}
+			
+			buffer += '\n\n';
+			
 			if (staticMembers.length > 0)
 			{
 				//Place the static members first (skip the ones that aren't native types, we will import later
-				buffer += "\t\t_statics_: {\n\t";
 				for (i in staticMembers)
 				{
 					if (staticMembers[i] instanceof AS3Function)
 					{
-						buffer += AS3Parser.increaseIndent(stringifyFunc(staticMembers[i]), 1, 0);
+						buffer += className + "." + stringifyFunc(staticMembers[i]);
 					} else if (staticMembers[i].type === "Number" || staticMembers[i].type === "int" || staticMembers[i].type === "uint")
 					{
 						if (isNaN(parseInt(staticMembers[i].value)))
 						{
-							buffer += AS3Parser.increaseIndent('\t\t' + staticMembers[i].name + ': 0,\n', 1, 0);
+							buffer += className + "." + staticMembers[i].name + ' = 0;\n';
 						} else
 						{
-							buffer += AS3Parser.increaseIndent(stringifyFunc(staticMembers[i]), 1, 0);
+							buffer += className + "." + stringifyFunc(staticMembers[i]);
 						}
 					} else if (staticMembers[i].type === "Boolean")
 					{
-						buffer += AS3Parser.increaseIndent('\t\t' + staticMembers[i].name + ': false,\n', 1, 0);
+						buffer += className + "." + staticMembers[i].name + ' = false;\n';
 					} else
 					{
-						buffer += AS3Parser.increaseIndent('\t\t' + staticMembers[i].name + ': null,\n', 1, 0);
+						buffer += className + "." +  staticMembers[i].name + ' = null;\n';
 					}
 				}
 				for (i in staticGetters)
 				{
-					buffer += AS3Parser.increaseIndent(stringifyFunc(staticGetters[i]), 1, 0);
+					buffer += className + "." + stringifyFunc(staticGetters[i]);
 				}
 				for (i in staticSetters)
 				{
-					buffer += AS3Parser.increaseIndent(stringifyFunc(staticSetters[i]), 1, 0);
+					buffer += className + "." + stringifyFunc(staticSetters[i]);
 				}
-				buffer = buffer.substr(0, buffer.lastIndexOf(',')) + '\n\t';
-				buffer += "\t},\n";
+				buffer += '\n';
 			}		
+			buffer += "\n";
+			
 			for (i in getters)
 			{
-				buffer += stringifyFunc(getters[i]);
+				buffer += className + ".prototype." + stringifyFunc(getters[i]);
 			}
 			for (i in setters)
 			{
-				buffer += stringifyFunc(setters[i]);
+				buffer += className + ".prototype." + stringifyFunc(setters[i]);
 			}
 			for (i in members)
 			{
+				if (members[i].name === className)
+				{
+					continue;
+				}
 				if (members[i] instanceof AS3Function || (AS3Class.nativeTypes.indexOf(members[i].type) >= 0 && members[i].value))
 				{
-					buffer += stringifyFunc(members[i]); //Print functions immediately
+					buffer += className + ".prototype." + stringifyFunc(members[i]); //Print functions immediately
 				} else if (members[i].type === "Number" || members[i].type === "int" || members[i].type === "uint")
 				{
 					if (isNaN(parseInt(members[i].value)))
 					{
-						buffer += AS3Parser.increaseIndent('\t\t' + members[i].name + ': 0,\n', 1, 0);
+						buffer += className + ".prototype." + members[i].name + ' = 0;\n';
 					} else
 					{
-						buffer += stringifyFunc(members[i]);
+						buffer += className + ".prototype." + stringifyFunc(members[i]);
 					}
 				} else if (members[i].type === "Boolean")
 				{
-					buffer += AS3Parser.increaseIndent('\t\t' + members[i].name + ': false,\n', 1, 0);
+					buffer += className + ".prototype." + members[i].name + ' = false;\n';
 				} else
 				{
-					buffer += AS3Parser.increaseIndent('\t\t' + members[i].name + ': null,\n', 1, 0);
+					buffer += className + ".prototype." + members[i].name + ' = null;\n';
 				}
 			}
 
 			buffer = buffer.substr(0, buffer.length - 2) + "\n"; //Strips the final comma out of the string
 
-			buffer += "\t});\n"
-			buffer += "\n";
-			buffer += "\tmodule.exports = " + className + ";\n";
-			buffer += "});";
+			buffer += "\n\n";
+			buffer += "module.exports = " + className + ";\n";
 
 			//Remaining fixes
 			buffer = buffer.replace(/(this\.)+/g, "this.");

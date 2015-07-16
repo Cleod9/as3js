@@ -1,13 +1,11 @@
 package com.mcleodgaming.as3js
 {
 	import com.mcleodgaming.as3js.parser.AS3Parser;
-	import com.mcleodgaming.as3js.util.AS3JSUtils;
 	require "path"
 	require "fs"
 	
 	public class AS3JS 
 	{
-		
 		public static var DEBUG_MODE:Boolean = false;
 		public static var SILENT:Boolean = false;
 		public static function debug():void
@@ -63,11 +61,6 @@ package com.mcleodgaming.as3js
 
 			var classes:Object = {};
 			var buffer:String = "";
-			
-			//Begin output with library helpers
-			buffer += "var AS3JSUtils = function () {};\n";
-			buffer += "\tAS3JSUtils.getDefaultValue = " + AS3JSUtils.getDefaultValue.toString().replace(/\t\t/g, "\t") + ";\n";
-			buffer += "\tAS3JSUtils.createArray = " + AS3JSUtils.createArray.toString().replace(/\t\t/g, "\t") + ";\n"; 
 			
 			//First, parse through the classes and get the basic information
 			for (i in pkgLists)
@@ -143,13 +136,67 @@ package com.mcleodgaming.as3js
 				classes[i].process(classes);
 			}
 
-			//Retrieve output
+			var mainTemplate:String = fs.readFileSync(path.join(__dirname, 'util', 'main-template.js')).toString();
+			var classTemplate:String = fs.readFileSync(path.join(__dirname, 'util', 'class-template.js')).toString();
+			var packageObjects:Array = [];
+			var classObjects:Array = null;
+			var currentClass:String = "";
+			
+			if (options.entry)
+			{
+				// Entry point should be in the format "mode:path.to.package.Class"
+				var currentPackage:String = options.entry.split(":")[1];
+				var mode:String = "";
+				if (currentPackage) {
+					// Possible modes are "new" and "exports"
+					// In "new" mode, entry point is called via "new" operator
+					// In "exports" mode, entry point is returned as module
+					mode = options.entry.split(":")[0]
+				} else
+				{
+					// Force "new" mode
+					currentPackage = options.entry;
+					mode = "new";
+				}
+				// Update template with entry points
+				mainTemplate = mainTemplate.replace(/\{\{entryPackage\}\}/g, classes[currentPackage].packageName);
+				mainTemplate = mainTemplate.replace(/\{\{entryClass\}\}/g, classes[currentPackage].className);
+				mainTemplate = mainTemplate.replace(/\{\{entryMode\}\}/g, mode);
+			} else
+			{
+				mainTemplate = mainTemplate.replace(/\{\{entryPackage\}\}/g, "");
+				mainTemplate = mainTemplate.replace(/\{\{entryClass\}\}/g, "");
+				mainTemplate = mainTemplate.replace(/\{\{entryMode\}\}/g, "");
+			}
+			
+			//Retrieve converted class code
+			var groupByPackage:Object = { };
 			for (i in classes)
 			{
-				buffer += classes[i].toString() + '\n';
+				groupByPackage[classes[i].packageName] = groupByPackage[classes[i].packageName] || [];
+				groupByPackage[classes[i].packageName].push(classes[i]);
 			}
-
+			for (i in groupByPackage)
+			{
+				classObjects = [];
+				for (j in groupByPackage[i])
+				{
+					currentClass = classTemplate;
+					currentClass = currentClass.replace(/\{\{className\}\}/g, groupByPackage[i][j].className);
+					currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(groupByPackage[i][j].toString(), "    "));
+					classObjects.push(currentClass);
+				}
+				packageObjects.push('"' + groupByPackage[i][j].packageName + '": {\n' +  AS3Parser.increaseIndent(classObjects.join(", "), "  ") + "\n}");
+			}
+			
+			mainTemplate = mainTemplate.replace(/\{\{packages\}\}/g, AS3Parser.increaseIndent(packageObjects.join(", "), "    "));
+			
+			mainTemplate = mainTemplate.replace(/\t/g, "  ");
+			
+			buffer += mainTemplate;
+			
 			AS3JS.log("Done.");
+			
 			return buffer;
 		}
 		private function readDirectory(location:String, pkgBuffer:String, obj:Object):void

@@ -2,9 +2,11 @@
 
 ----------
 
+(Note to **v0.1.*** Users: [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs) are no longer dependencies of this project, so take caution when updating to update your initialization proccess);
+
 [http://www.as3js.org](http://www.as3js.org)
 
-AS3JS is a simple command line tool written in Node.js that converts ActionScript 3.0 to JavaScript while leveraging two of my libraries: [OOPS.js](https://github.com/Cleod9/oopsjs) and [ImportJS](https://github.com/Cleod9/importjs). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a single JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
+AS3JS is a simple command line tool written in Node.js that converts ActionScript 3.0 to vanilla JavaScript (originally based on [ImportJS](https://github.com/Cleod9/importjs)). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a single JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
 
 So this tool was created with the following goals in mind: 
 
@@ -16,7 +18,7 @@ The best part about AS3JS is that even if you aren't familiar with AS3 you can s
 
 ## Main Features ##
 
-- Converts ActionScript 3.0 code into readable JavaScript output (Leveraging [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs))
+- Converts ActionScript 3.0 code into readable JavaScript output (Structure based on [ImportJS](https://github.com/Cleod9/importjs))
 - Recursively parses directories for ActionScript files and automatically resolves import dependencies
 - Concatenation into a single .js file
 - Support for Vector type syntax (transpiles to a standard Array)
@@ -32,8 +34,7 @@ The best part about AS3JS is that even if you aren't familiar with AS3 you can s
 **Installation Requirements:**
 
 - [Node.js](http://nodejs.org/)
-- [ImportJS for Node.js](https://github.com/Cleod9/node-importjs) or for [Browser](https://github.com/Cleod9/importjs)
-- [OOPS.js for Node/js](https://github.com/Cleod9/node-oopsjs) or for [Browser](https://github.com/Cleod9/oopsjs)
+
 
 So the first thing you need in order to use this application is Node.js:
 
@@ -44,18 +45,6 @@ Once installed, then install AS3JS as a global module via your command line:
 ```
 $ npm install as3js -g
 ```
-
-After the installation completes, you'll gain the ability to run the command `as3js` anywhere on your system via command line. Then lastly you'll just need to install the correct version of ImportJS and OOPS.js depending on if you want to do client-side or server-side development:
-
-**For server-side (Node) projects:**
-
-`$ npm install node-oopsjs`
-`$ npm install node-importjs`
-
-**For client-side apps in the browser:**
-
-- [ImportJS](https://github.com/Cleod9/importjs)
-- [OOPS.js](https://github.com/Cleod9/oopsjs)
 
 ## Usage ##
 
@@ -71,16 +60,18 @@ AS3JS is run by typing in the command `as3js` in your command-line window. This 
 
 `-s`,`--silent`: Flag to completely silence AS3JS output.
 
-`--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
+`-v`, `--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
+
+`-e`, `--entry`: This is the entry package class for your application. Uses the format `[mode]:path.to.package.Class`. You replace `[mode]` with either `"new"` to have AS3JS instantiate the class once your compiled script loads, or `"module"` to have AS3JS return the specified package as a module so may load it with require().
 
 
 Here is an example command:
 
 ```
-$ as3js -src ./myas3 -o ./output.js
+$ as3js -src ./myas3 -o ./output.js -e new:com.example.MyClass
 ```
 
-The above example recursively browses through the directory `myas3` finding all `.as` files, converts them to JS, and finally combines the results into a file called `output.js` in the working directory. Simple as that!
+The above example recursively browses through the directory `myas3` finding all `.as` files, converts them to JS, and finally combines the results into a file called `output.js` in the working directory. This script contains your entire application, and will initialize `MyClass` as your entry point.  Simple as that!
 
 ## Examples ##
 
@@ -200,7 +191,12 @@ Lastly, I fully acknowledge the ActionScript name as the property of [Adobe](htt
 
 ## Version History ##
 
-**0.1.0**
+**0.2.***
+
+-Created new Vanilla output format that no longer requires external libraries
+-Removed ImportJS and OOPS.js as dependencies
+
+**0.1.***
 
 -Initial alpha release
 
