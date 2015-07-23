@@ -128,6 +128,12 @@ package com.mcleodgaming.as3js
 			{
 				classes[i].findParents(classes);
 			}
+			
+			//Walk through the class members that had assignments in the class scope
+			for (i in classes)
+			{
+				classes[i].checkMembersWithAssignments();
+			}
 				
 			//Process the function text to comply with JS
 			for (i in classes)

@@ -396,7 +396,7 @@ package com.mcleodgaming.as3js.parser
 					{
 						//Set the class name
 						cls.className = currToken.token;
-						cls.importMap[cls.className] = cls; //Register self into the import map (used for static detection)
+						cls.classMap[cls.className] = cls; //Register self into the import map (used for static detection)
 						//Now we will check for parent class and any interfaces
 						currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 						if (currToken.token == 'extends' && currToken.index < tmpToken.index)
@@ -501,6 +501,8 @@ package com.mcleodgaming.as3js.parser
 						//Store value
 						currMember.value = tmpArr[0].trim();
 						index =  tmpArr[1];
+						
+						cls.membersWithAssignments.push(currMember);
 					}
 
 					//Store and delete current member and exit
@@ -864,6 +866,11 @@ package com.mcleodgaming.as3js.parser
 							result += currToken.token;
 						} else
 						{
+							if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token])
+							{
+								// If this is a token that matches a class from a potential import statement, store it in the filtered classMap
+								cls.classMapFiltered[currToken.token] = cls.classMap[currToken.token];
+							}
 							tmpStatic = (cls.className == currToken.token || cls.retrieveField(currToken.token, true) !== null);
 							
 							//Find field in class, then make sure we didn't already have a local member defined with this name, and skip next block if static since the definition is the class itself
@@ -950,15 +957,15 @@ package com.mcleodgaming.as3js.parser
 							if (tmpStatic)
 							{
 								//Just use the class itself, we will reference fields from it. If parser injected the static prefix manually, we'll try to determome the type of var instead
-								tmpClass = (cls.className == currToken.token) ? cls : (tmpMember) ? cls.importMap[tmpMember.type] || null : null; 
+								tmpClass = (cls.className == currToken.token) ? cls : (tmpMember) ? cls.classMap[tmpMember.type] || null : null; 
 							} else
 							{
 								//Use the member's type to determine the class it's mapped to
-								tmpClass = (tmpMember && tmpMember.type && tmpMember.type != '*') ? cls.importMap[tmpMember.type] : null; 
+								tmpClass = (tmpMember && tmpMember.type && tmpMember.type != '*') ? cls.classMap[tmpMember.type] : null; 
 								//If no mapping was found, this may be a static reference
-								if (!tmpClass && cls.importMap[currToken.token])
+								if (!tmpClass && cls.classMap[currToken.token])
 								{
-									tmpClass = cls.importMap[currToken.token];
+									tmpClass = cls.classMap[currToken.token];
 									tmpStatic = true;
 								}
 							}
@@ -966,7 +973,7 @@ package com.mcleodgaming.as3js.parser
 							if (!tmpClass && tmpMember && tmpMember.type && tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpMember.type)
 							{
 								//Extract Vector type if necessary by testing regex
-								tmpClass = cls.importMap[tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1")] || null;
+								tmpClass = cls.classMap[tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1")] || null;
 							}
 						}
 						//Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
@@ -1063,7 +1070,7 @@ package com.mcleodgaming.as3js.parser
 									if (tmpClass && tmpField && tmpField.type && tmpField.type != '*')
 									{
 										//Extract Vector type if necessary by testing regex
-										tmpClass = (tmpField.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpField.type) ? tmpClass.importMap[tmpField.type.replace(/Vector\.<(.*?)>/g, "$1")] || null : tmpClass.importMap[tmpField.type] || null;
+										tmpClass = (tmpField.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpField.type) ? tmpClass.classMap[tmpField.type.replace(/Vector\.<(.*?)>/g, "$1")] || null : tmpClass.classMap[tmpField.type] || null;
 									} else
 									{
 										tmpClass = null;

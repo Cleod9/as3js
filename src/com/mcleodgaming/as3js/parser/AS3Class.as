@@ -26,10 +26,12 @@ package com.mcleodgaming.as3js.parser
 		public var staticGetters:Vector.<AS3Member>;
 		public var staticSetters:Vector.<AS3Member>;
 		public var isInterface:Boolean;
+		public var membersWithAssignments:Vector.<AS3Member>; //List of class members that have assignments in the class-level scope
 		public var fieldMap:Object; //Maps instance field names to instance members
 		public var staticFieldMap:Object; //Maps static field names to static members
-		public var importMap:Object; //Maps class shorthand name to class
-		public var classMap:Object; //Maps full package path to class
+		public var classMap:Object; //Maps class shorthand name to class
+		public var classMapFiltered:Object; //Same as classMap but only references classes that are actually used (i.e. used in another way besides just a "type")
+		public var packageMap:Object; //Maps full package path to class
 			
 		public function AS3Class() 
 		{
@@ -48,11 +50,13 @@ package com.mcleodgaming.as3js.parser
 			setters = new Vector.<AS3Member>();
 			staticGetters = new Vector.<AS3Member>();
 			staticSetters = new Vector.<AS3Member>();
+			membersWithAssignments = new Vector.<AS3Member>();
 			isInterface = false;
 			fieldMap = {};
 			staticFieldMap = {};
-			importMap = { };
 			classMap = { };
+			classMapFiltered = { };
+			packageMap = { };
 		}
 		public function registerImports(clsList:Object):void
 		{
@@ -63,7 +67,7 @@ package com.mcleodgaming.as3js.parser
 				{
 					var lastIndex:int = imports[i].lastIndexOf(".");
 					var shorthand:String = (lastIndex < 0) ? imports[i] : imports[i].substr(lastIndex + 1);
-					importMap[shorthand] = clsList[imports[i]];
+					classMap[shorthand] = clsList[imports[i]];
 				}
 			}
 			for (i in importExtras)
@@ -72,10 +76,10 @@ package com.mcleodgaming.as3js.parser
 				{
 					var lastIndex:int = importExtras[i].lastIndexOf(".");
 					var shorthand:String = (lastIndex < 0) ? importExtras[i] : importExtras[i].substr(lastIndex + 1);
-					importMap[shorthand] = clsList[importExtras[i]];
+					classMap[shorthand] = clsList[importExtras[i]];
 				}
 			}
-			classMap = clsList;
+			packageMap = clsList;
 		}
 		public function registerField(name:String, value:AS3Member):void
 		{
@@ -331,6 +335,26 @@ package com.mcleodgaming.as3js.parser
 				}
 			}
 		}
+		public function checkMembersWithAssignments():void
+		{
+			var i:int;
+			var j:*;
+			var classMember:AS3Member;
+			// If the type of this param is a Class
+			for (i = 0; i < membersWithAssignments.length; i++)
+			{
+				classMember = membersWithAssignments[i];
+				// Make a dumb attempt to identify use of the class as assignments here
+				for (j in imports)
+				{
+					if (classMember.value.indexOf(packageMap[imports[j]].className) >= 0 && parentDefinition !== packageMap[imports[j]])
+					{
+						// If this is a token that matches a class from an import statement, store it in the filtered classMap
+						classMapFiltered[packageMap[imports[j]].className] = packageMap[imports[j]];
+					}
+				}
+			}
+		}
 		public function stringifyFunc(fn:AS3Member):String
 		{
 			var buffer:String = "";
@@ -510,7 +534,11 @@ package com.mcleodgaming.as3js.parser
 				{
 					if (imports[i].indexOf('flash.') < 0 && parent != imports[i].substr(imports[i].lastIndexOf('.') + 1) && packageName + '.' + className != imports[i]) //Ignore flash imports
 					{
-						tmpArr.push(imports[i].substr(imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
+						// Must be in the filtered map, otherwise no point in writing
+						if (classMapFiltered[packageMap[imports[i]].className])
+						{
+							tmpArr.push(imports[i].substr(imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
+						}
 					}
 				}
 				//Join up separated by commas
@@ -526,7 +554,11 @@ package com.mcleodgaming.as3js.parser
 			{
 				if (imports[i].indexOf('flash.') < 0 && packageName + '.' + className != imports[i] && !(parentDefinition && parentDefinition.packageName + '.' + parentDefinition.className == imports[i])) //Ignore flash imports and parent for injections
 				{
-					injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = imports('" + classMap[imports[i]].packageName + "', '" + classMap[imports[i]].className + "');\n";
+					// Must be in the filtered map, otherwise no point in writing
+					if (classMapFiltered[packageMap[imports[i]].className])
+					{
+						injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = imports('" + packageMap[imports[i]].packageName + "', '" + packageMap[imports[i]].className + "');\n";
+					}
 				}
 			}
 			//Set the non-native statics vars now

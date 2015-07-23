@@ -156,6 +156,12 @@
                 {
                   classes[i].findParents(classes);
                 }
+                
+                //Walk through the class members that had assignments in the class scope
+                for (i in classes)
+                {
+                  classes[i].checkMembersWithAssignments();
+                }
                   
                 //Process the function text to comply with JS
                 for (i in classes)
@@ -439,10 +445,12 @@
                 this.setters = null;
                 this.staticGetters = null;
                 this.staticSetters = null;
+                this.membersWithAssignments = null;
                 this.fieldMap = null;
                 this.staticFieldMap = null;
-                this.importMap = null;
                 this.classMap = null;
+                this.classMapFiltered = null;
+                this.packageMap = null;
                 this.packageName = null;
                 this.className = null;
                 this.imports = [];
@@ -458,11 +466,13 @@
                 this.setters = [];
                 this.staticGetters = [];
                 this.staticSetters = [];
+                this.membersWithAssignments = [];
                 this.isInterface = false;
                 this.fieldMap = {};
                 this.staticFieldMap = {};
-                this.importMap = { };
                 this.classMap = { };
+                this.classMapFiltered = { };
+                this.packageMap = { };
               };
           
           
@@ -487,10 +497,12 @@
           AS3Class.prototype.staticGetters = null;
           AS3Class.prototype.staticSetters = null;
           AS3Class.prototype.isInterface = false;
+          AS3Class.prototype.membersWithAssignments = null;
           AS3Class.prototype.fieldMap = null;
           AS3Class.prototype.staticFieldMap = null;
-          AS3Class.prototype.importMap = null;
           AS3Class.prototype.classMap = null;
+          AS3Class.prototype.classMapFiltered = null;
+          AS3Class.prototype.packageMap = null;
           AS3Class.prototype.registerImports = function(clsList) {
                 var i;
                 for (i in this.imports)
@@ -499,7 +511,7 @@
                   {
                     var lastIndex = this.imports[i].lastIndexOf(".");
                     var shorthand = (lastIndex < 0) ? this.imports[i] : this.imports[i].substr(lastIndex + 1);
-                    this.importMap[shorthand] = clsList[this.imports[i]];
+                    this.classMap[shorthand] = clsList[this.imports[i]];
                   }
                 }
                 for (i in this.importExtras)
@@ -508,10 +520,10 @@
                   {
                     var lastIndex = this.importExtras[i].lastIndexOf(".");
                     var shorthand = (lastIndex < 0) ? this.importExtras[i] : this.importExtras[i].substr(lastIndex + 1);
-                    this.importMap[shorthand] = clsList[this.importExtras[i]];
+                    this.classMap[shorthand] = clsList[this.importExtras[i]];
                   }
                 }
-                this.classMap = clsList;
+                this.packageMap = clsList;
               };
           AS3Class.prototype.registerField = function(name, value) {
                 if (value && value.isStatic)
@@ -761,6 +773,25 @@
                   }
                 }
               };
+          AS3Class.prototype.checkMembersWithAssignments = function() {
+                var i;
+                var j;
+                var classMember;
+                // If the type of this param is a Class
+                for (i = 0; i < this.membersWithAssignments.length; i++)
+                {
+                  classMember = this.membersWithAssignments[i];
+                  // Make a dumb attempt to identify use of the class as assignments here
+                  for (j in this.imports)
+                  {
+                    if (classMember.value.indexOf(this.packageMap[this.imports[j]].className) >= 0 && this.parentDefinition !== this.packageMap[this.imports[j]])
+                    {
+                      // If this is a token that matches a class from an import statement, store it in the filtered classMap
+                      this.classMapFiltered[this.packageMap[this.imports[j]].className] = this.packageMap[this.imports[j]];
+                    }
+                  }
+                }
+              };
           AS3Class.prototype.stringifyFunc = function(fn) {
                 var buffer = "";
                 if (fn instanceof AS3Function)
@@ -936,7 +967,11 @@
                   {
                     if (this.imports[i].indexOf('flash.') < 0 && this.parent != this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1) && this.packageName + '.' + this.className != this.imports[i]) //Ignore flash imports
                     {
-                      tmpArr.push(this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
+                      // Must be in the filtered map, otherwise no point in writing
+                      if (this.classMapFiltered[this.packageMap[this.imports[i]].className])
+                      {
+                        tmpArr.push(this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
+                      }
                     }
                   }
                   //Join up separated by commas
@@ -952,7 +987,11 @@
                 {
                   if (this.imports[i].indexOf('flash.') < 0 && this.packageName + '.' + this.className != this.imports[i] && !(this.parentDefinition && this.parentDefinition.packageName + '.' + this.parentDefinition.className == this.imports[i])) //Ignore flash imports and parent for injections
                   {
-                    injectedText += "\t" + this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1) + " = imports('" + this.classMap[this.imports[i]].packageName + "', '" + this.classMap[this.imports[i]].className + "');\n";
+                    // Must be in the filtered map, otherwise no point in writing
+                    if (this.classMapFiltered[this.packageMap[this.imports[i]].className])
+                    {
+                      injectedText += "\t" + this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1) + " = imports('" + this.packageMap[this.imports[i]].packageName + "', '" + this.packageMap[this.imports[i]].className + "');\n";
+                    }
                   }
                 }
                 //Set the non-native statics vars now
@@ -1555,6 +1594,11 @@
                         result += currToken.token;
                       } else
                       {
+                        if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token])
+                        {
+                          // If this is a token that matches a class from a potential import statement, store it in the filtered classMap
+                          cls.classMapFiltered[currToken.token] = cls.classMap[currToken.token];
+                        }
                         tmpStatic = (cls.className == currToken.token || cls.retrieveField(currToken.token, true) !== null);
                         
                         //Find field in class, then make sure we didn't already have a local member defined with this name, and skip next block if static since the definition is the class itself
@@ -1641,15 +1685,15 @@
                         if (tmpStatic)
                         {
                           //Just use the class itself, we will reference fields from it. If parser injected the static prefix manually, we'll try to determome the type of var instead
-                          tmpClass = (cls.className == currToken.token) ? cls : (tmpMember) ? cls.importMap[tmpMember.type] || null : null; 
+                          tmpClass = (cls.className == currToken.token) ? cls : (tmpMember) ? cls.classMap[tmpMember.type] || null : null; 
                         } else
                         {
                           //Use the member's type to determine the class it's mapped to
-                          tmpClass = (tmpMember && tmpMember.type && tmpMember.type != '*') ? cls.importMap[tmpMember.type] : null; 
+                          tmpClass = (tmpMember && tmpMember.type && tmpMember.type != '*') ? cls.classMap[tmpMember.type] : null; 
                           //If no mapping was found, this may be a static reference
-                          if (!tmpClass && cls.importMap[currToken.token])
+                          if (!tmpClass && cls.classMap[currToken.token])
                           {
-                            tmpClass = cls.importMap[currToken.token];
+                            tmpClass = cls.classMap[currToken.token];
                             tmpStatic = true;
                           }
                         }
@@ -1657,7 +1701,7 @@
                         if (!tmpClass && tmpMember && tmpMember.type && tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpMember.type)
                         {
                           //Extract Vector type if necessary by testing regex
-                          tmpClass = cls.importMap[tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1")] || null;
+                          tmpClass = cls.classMap[tmpMember.type.replace(/Vector\.<(.*?)>/g, "$1")] || null;
                         }
                       }
                       //Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
@@ -1754,7 +1798,7 @@
                             if (tmpClass && tmpField && tmpField.type && tmpField.type != '*')
                             {
                               //Extract Vector type if necessary by testing regex
-                              tmpClass = (tmpField.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpField.type) ? tmpClass.importMap[tmpField.type.replace(/Vector\.<(.*?)>/g, "$1")] || null : tmpClass.importMap[tmpField.type] || null;
+                              tmpClass = (tmpField.type.replace(/Vector\.<(.*?)>/g, "$1") != tmpField.type) ? tmpClass.classMap[tmpField.type.replace(/Vector\.<(.*?)>/g, "$1")] || null : tmpClass.classMap[tmpField.type] || null;
                             } else
                             {
                               tmpClass = null;
@@ -1932,7 +1976,7 @@
                     {
                       //Set the class name
                       cls.className = currToken.token;
-                      cls.importMap[cls.className] = cls; //Register self into the import map (used for static detection)
+                      cls.classMap[cls.className] = cls; //Register self into the import map (used for static detection)
                       //Now we will check for parent class and any interfaces
                       currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
                       if (currToken.token == 'extends' && currToken.index < tmpToken.index)
@@ -2037,6 +2081,8 @@
                       //Store value
                       currMember.value = tmpArr[0].trim();
                       index =  tmpArr[1];
+                      
+                      cls.membersWithAssignments.push(currMember);
                     }
           
                     //Store and delete current member and exit
