@@ -7,7 +7,8 @@ var sourceText = as3js.compile({
 	silent: false,
 	verbose: false,
 	entry: 'exports:com.mcleodgaming.as3js.AS3JS'
-});
+}).compiledSource;
+
 if (fs.existsSync('runtime-compiled.js'))
 {
 	fs.unlinkSync('runtime-compiled.js');

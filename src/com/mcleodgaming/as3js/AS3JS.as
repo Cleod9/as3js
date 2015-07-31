@@ -41,8 +41,9 @@ package com.mcleodgaming.as3js
 			
 		}
 		
-		public function compile(options:Object = null):String
+		public function compile(options:Object = null):Object
 		{
+			var packages:Object = { }; //Will contain the final map of package names to source text
 			var i:*;
 			var j:*;
 			var k:*;
@@ -187,9 +188,10 @@ package com.mcleodgaming.as3js
 				classObjects = [];
 				for (j in groupByPackage[i])
 				{
+					packages[i+"."+groupByPackage[i][j].className] = groupByPackage[i][j].toString();
 					currentClass = classTemplate;
 					currentClass = currentClass.replace(/\{\{className\}\}/g, groupByPackage[i][j].className);
-					currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(groupByPackage[i][j].toString(), "    "));
+					currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(packages[i+"."+groupByPackage[i][j].className], "    "));
 					classObjects.push(currentClass);
 				}
 				packageObjects.push('"' + groupByPackage[i][j].packageName + '": {\n' +  AS3Parser.increaseIndent(classObjects.join(", "), "  ") + "\n}");
@@ -203,7 +205,7 @@ package com.mcleodgaming.as3js
 			
 			AS3JS.log("Done.");
 			
-			return buffer;
+			return { compiledSource: buffer, packageSources: packages };
 		}
 		private function readDirectory(location:String, pkgBuffer:String, obj:Object):void
 		{

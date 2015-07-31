@@ -12,6 +12,7 @@ var output = null;
 var silent = false;
 var verbose = false;
 var entry = null;
+var dry = false;
 
 //Command line args
 var arg = null;
@@ -39,6 +40,8 @@ for(var i = 0; i < process.argv.length; i++) {
 	} else {
 		if(arg == '--verbose') {
 			verbose = true;
+		} else if(arg == '-d' || arg == '--dry') {
+			dry = true;
 		} else if(arg == '-s' || arg == '--silent') {
 			silent = true;
 		} else if(arg == '-o' || arg == '--output') {
@@ -81,7 +84,7 @@ if(srcPaths.length <= 0) {
 	});
 	
 	//Remove old output file if it exists
-	if (output)
+	if (output && !dry)
 	{
 		if (fs.existsSync(output))
 		{

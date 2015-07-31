@@ -62,8 +62,9 @@ AS3JS is run by typing in the command `as3js` in your command-line window. This 
 
 `-v`, `--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
 
-`-e`, `--entry`: This is the entry package class for your application. Uses the format `[mode]:path.to.package.Class`. You replace `[mode]` with either `"new"` to have AS3JS instantiate the class once your compiled script loads, or `"module"` to have AS3JS return the specified package as a module so may load it with require().
+`-d`, `--dry`: Perfoms a dry-run of the compilation. This will perform all of the usual compilation steps but skip writing the final output file.
 
+`-e`, `--entry`: This is the entry package class for your application. Uses the format `[mode]:path.to.package.Class`. You replace `[mode]` with either `"new"` to have AS3JS instantiate the class once your compiled script loads, or `"module"` to have AS3JS return the specified package as a module so may load it with require().
 
 Here is an example command:
 

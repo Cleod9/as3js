@@ -818,6 +818,7 @@ package com.mcleodgaming.as3js.parser
 			var tmpStatic:Boolean = false;
 			var tmpPeek:String;
 			var objBuffer = ''; //Tracks the current object that is being "pathed" (e.g. "object.field1" or "object.field1[index + 1]", etc)
+			var justCreatedVar:Boolean = false; //Keeps track if we just started a var statement (to help test if we're setting a type))
 			for (index = 0; index < fnText.length; index++)
 			{
 				objBuffer = '';
@@ -866,7 +867,7 @@ package com.mcleodgaming.as3js.parser
 							result += currToken.token;
 						} else
 						{
-							if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token])
+							if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token] && !(justCreatedVar && currToken.extra.match(/:\s*/g)))
 							{
 								// If this is a token that matches a class from a potential import statement, store it in the filtered classMap
 								cls.classMapFiltered[currToken.token] = cls.classMap[currToken.token];
@@ -979,14 +980,21 @@ package com.mcleodgaming.as3js.parser
 						//Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
 						
 						//If this had a variable declaration before it, we will add it to the local var stack and move on to the next token
-						if (prevToken && prevToken.token === "var" && cls.retrieveField(currToken.token, tmpStatic))
+						if (prevToken && prevToken.token === "var")
 						{
-							//Appends current character index to the result, add dummy var to stack, and move on
-							result += fnText.charAt(index);
-							var localVar:AS3Member = new AS3Member();
-							localVar.name = currToken.token;
-							stack.push(localVar); //<-Ensures we don't add "this." or anything in front of this variable anymore
-							continue;
+							justCreatedVar = true;
+							if (cls.retrieveField(currToken.token, tmpStatic))
+							{
+								//Appends current character index to the result, add dummy var to stack, and move on
+								result += fnText.charAt(index);
+								var localVar:AS3Member = new AS3Member();
+								localVar.name = currToken.token;
+								stack.push(localVar); //<-Ensures we don't add "this." or anything in front of this variable anymore
+								continue;
+							}
+						} else
+						{
+							justCreatedVar = false;
 						}
 						
 						//We have parsed the current token, and the index sits at the next level down in the object

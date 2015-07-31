@@ -71,6 +71,7 @@
           
           AS3JS.prototype.compile = function(options) {
                 options = AS3JSUtils.getDefaultValue(options, null);
+                var packages = { }; //Will contain the final map of package names to source text
                 var i;
                 var j;
                 var k;
@@ -215,9 +216,10 @@
                   classObjects = [];
                   for (j in groupByPackage[i])
                   {
+                    packages[i+"."+groupByPackage[i][j].className] = groupByPackage[i][j].toString();
                     currentClass = classTemplate;
                     currentClass = currentClass.replace(/\{\{className\}\}/g, groupByPackage[i][j].className);
-                    currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(groupByPackage[i][j].toString(), "    "));
+                    currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(packages[i+"."+groupByPackage[i][j].className], "    "));
                     classObjects.push(currentClass);
                   }
                   packageObjects.push('"' + groupByPackage[i][j].packageName + '": {\n' +  AS3Parser.increaseIndent(classObjects.join(", "), "  ") + "\n}");
@@ -231,7 +233,7 @@
                 
                 AS3JS.log("Done.");
                 
-                return buffer;
+                return { compiledSource: buffer, packageSources: packages };
               };
           AS3JS.prototype.readDirectory = function(location, pkgBuffer, obj) {
                 var files = fs.readdirSync(location);
@@ -420,13 +422,12 @@
       AS3Class: {
         compiled: false,
         source: function ( module ) {
-          var AS3JS, AS3Parser, AS3Pattern, AS3Function, AS3Member, AS3Variable;
+          var AS3JS, AS3Parser, AS3Pattern, AS3Function, AS3Variable;
           module.inject = function () {
             AS3JS = imports('com.mcleodgaming.as3js', 'AS3JS');
             AS3Parser = imports('com.mcleodgaming.as3js.parser', 'AS3Parser');
             AS3Pattern = imports('com.mcleodgaming.as3js.enums', 'AS3Pattern');
             AS3Function = imports('com.mcleodgaming.as3js.types', 'AS3Function');
-            AS3Member = imports('com.mcleodgaming.as3js.types', 'AS3Member');
             AS3Variable = imports('com.mcleodgaming.as3js.types', 'AS3Variable');
             AS3Class.reservedWords = ["as", "class", "delete", "false", "if", "instanceof", "native", "private", "super", "to", "use", "with", "break", "const", "do", "finally", "implements", "new", "protected", "switch", "true", "var", "case", "continue", "else", "for", "import", "internal", "null", "public", "this", "try", "void", "catch", "default", "extends", "function", "in", "is", "package", "return", "throw", "typeof", "while", "each", "get", "set", "namespace", "include", "dynamic", "final", "natiev", "override", "static", "abstract", "char", "export", "long", "throws", "virtual", "boolean", "debugger", "float", "prototype", "to", "volatile", "byte", "double", "goto", "short", "transient", "cast", "enum", "intrinsic", "synchronized", "type"];
             AS3Class.nativeTypes = ["Boolean", "Number", "int", "uint", "String" ];
@@ -1546,6 +1547,7 @@
                 var tmpStatic = false;
                 var tmpPeek;
                 var objBuffer = ''; //Tracks the current object that is being "pathed" (e.g. "object.field1" or "object.field1[index + 1]", etc)
+                var justCreatedVar = false; //Keeps track if we just started a var statement (to help test if we're setting a type))
                 for (index = 0; index < fnText.length; index++)
                 {
                   objBuffer = '';
@@ -1594,7 +1596,7 @@
                         result += currToken.token;
                       } else
                       {
-                        if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token])
+                        if (cls.classMap[currToken.token] && cls.parentDefinition !== cls.classMap[currToken.token] && !(justCreatedVar && currToken.extra.match(/:\s*/g)))
                         {
                           // If this is a token that matches a class from a potential import statement, store it in the filtered classMap
                           cls.classMapFiltered[currToken.token] = cls.classMap[currToken.token];
@@ -1707,14 +1709,21 @@
                       //Note: At this point, tmpMember is no longer used, it was only needed to remember the type of the first token. objBuffer will be building out the token
                       
                       //If this had a variable declaration before it, we will add it to the local var stack and move on to the next token
-                      if (prevToken && prevToken.token === "var" && cls.retrieveField(currToken.token, tmpStatic))
+                      if (prevToken && prevToken.token === "var")
                       {
-                        //Appends current character index to the result, add dummy var to stack, and move on
-                        result += fnText.charAt(index);
-                        var localVar = new AS3Member();
-                        localVar.name = currToken.token;
-                        stack.push(localVar); //<-Ensures we don't add "this." or anything in front of this variable anymore
-                        continue;
+                        justCreatedVar = true;
+                        if (cls.retrieveField(currToken.token, tmpStatic))
+                        {
+                          //Appends current character index to the result, add dummy var to stack, and move on
+                          result += fnText.charAt(index);
+                          var localVar = new AS3Member();
+                          localVar.name = currToken.token;
+                          stack.push(localVar); //<-Ensures we don't add "this." or anything in front of this variable anymore
+                          continue;
+                        }
+                      } else
+                      {
+                        justCreatedVar = false;
                       }
                       
                       //We have parsed the current token, and the index sits at the next level down in the object
