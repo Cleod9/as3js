@@ -1,6 +1,6 @@
 {
 	"name": "as3js",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"author": "Greg McLeod <cleod9@gmail.com>",
 	"description": "AS3 to JS converter for use with ImportJS and OOPS.js.",
 	"bin": {

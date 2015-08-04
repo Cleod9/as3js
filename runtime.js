@@ -785,7 +785,7 @@
                   // Make a dumb attempt to identify use of the class as assignments here
                   for (j in this.imports)
                   {
-                    if (classMember.value.indexOf(this.packageMap[this.imports[j]].className) >= 0 && this.parentDefinition !== this.packageMap[this.imports[j]])
+                    if (this.packageMap[this.imports[j]] && classMember.value.indexOf(this.packageMap[this.imports[j]].className) >= 0 && this.parentDefinition !== this.packageMap[this.imports[j]])
                     {
                       // If this is a token that matches a class from an import statement, store it in the filtered classMap
                       this.classMapFiltered[this.packageMap[this.imports[j]].className] = this.packageMap[this.imports[j]];

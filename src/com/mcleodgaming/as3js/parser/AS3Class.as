@@ -347,7 +347,7 @@ package com.mcleodgaming.as3js.parser
 				// Make a dumb attempt to identify use of the class as assignments here
 				for (j in imports)
 				{
-					if (classMember.value.indexOf(packageMap[imports[j]].className) >= 0 && parentDefinition !== packageMap[imports[j]])
+					if (packageMap[imports[j]] && classMember.value.indexOf(packageMap[imports[j]].className) >= 0 && parentDefinition !== packageMap[imports[j]])
 					{
 						// If this is a token that matches a class from an import statement, store it in the filtered classMap
 						classMapFiltered[packageMap[imports[j]].className] = packageMap[imports[j]];
