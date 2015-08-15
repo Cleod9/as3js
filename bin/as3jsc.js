@@ -81,7 +81,7 @@ if(srcPaths.length <= 0) {
 		silent: silent,
 		verbose: verbose,
 		entry: entry
-	});
+	}).compiledSource;
 	
 	//Remove old output file if it exists
 	if (output && !dry)
