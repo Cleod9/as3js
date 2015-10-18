@@ -1,6 +1,6 @@
 package com.mcleodgaming.as3js.parser
 {
-	import com.mcleodgaming.as3js.AS3JS;
+	import com.mcleodgaming.as3js.Main;
 	import com.mcleodgaming.as3js.enums.*;
 	import com.mcleodgaming.as3js.types.*;
 	
@@ -32,9 +32,25 @@ package com.mcleodgaming.as3js.parser
 		public var classMap:Object; //Maps class shorthand name to class
 		public var classMapFiltered:Object; //Same as classMap but only references classes that are actually used (i.e. used in another way besides just a "type")
 		public var packageMap:Object; //Maps full package path to class
+		
+		// Options
+		public var safeRequire:Boolean; //Try catch around parsed require statements
+		public var ignoreFlash:Boolean; //Ignore FL imports
 			
-		public function AS3Class() 
+		public function AS3Class(options:Object = null) 
 		{
+			options = options || { };
+			safeRequire = false;
+			
+			if (typeof options.safeRequire !== 'undefined')
+			{
+				safeRequire = options.safeRequire;
+			}
+			if (typeof options.ignoreFlash !== 'undefined')
+			{
+				ignoreFlash = options.ignoreFlash;
+			}
+			
 			packageName = null;
 			className = null;
 			imports = new Vector.<String>();
@@ -480,7 +496,7 @@ package com.mcleodgaming.as3js.parser
 			
 			for (i in allFuncs)
 			{
-				AS3JS.debug("Now parsing function: " + className + ":" + allFuncs[i].name);
+				Main.debug("Now parsing function: " + className + ":" + allFuncs[i].name);
 				allFuncs[i].value = AS3Parser.parseFunc(this, allFuncs[i].value, allFuncs[i].buildLocalVariableStack(), allFuncs[i].isStatic)[0];
 				allFuncs[i].value = AS3Parser.checkArguments(allFuncs[i]);
 				if (allFuncs[i].name === className)
@@ -496,7 +512,7 @@ package com.mcleodgaming.as3js.parser
 			}
 			for (i in allStaticFuncs)
 			{
-				AS3JS.debug("Now parsing static function: " + className + ":" + allStaticFuncs[i].name);
+				Main.debug("Now parsing static function: " + className + ":" + allStaticFuncs[i].name);
 				allStaticFuncs[i].value = AS3Parser.parseFunc(this, allStaticFuncs[i].value, allStaticFuncs[i].buildLocalVariableStack(), allStaticFuncs[i].isStatic)[0];
 				allStaticFuncs[i].value = AS3Parser.checkArguments(allStaticFuncs[i]);
 				allStaticFuncs[i].value = AS3Parser.cleanup(allStaticFuncs[i].value);
@@ -511,9 +527,18 @@ package com.mcleodgaming.as3js.parser
 
 			if (requires.length > 0)
 			{
-				for (var i in requires)
+				if (safeRequire)
 				{
-					buffer += 'var ' + requires[i].substring(1, requires[i].length-1) + ' = require(' + requires[i] + ');\n';
+					for (i in requires)
+					{
+						buffer += 'var ' + requires[i].substring(1, requires[i].length-1) + ' = (function () { try { return require(' + requires[i] + '); } catch(e) { return undefined; }})();\n';
+					}
+				} else
+				{
+					for (i in requires)
+					{
+						buffer += 'var ' + requires[i].substring(1, requires[i].length-1) + ' = require(' + requires[i] + ');\n';
+					}
 				}
 				buffer += "\n";
 			}
@@ -523,7 +548,7 @@ package com.mcleodgaming.as3js.parser
 			//Parent class must be imported if it exists
 			if (parentDefinition)
 			{
-				buffer += "var " + parentDefinition.className + " = imports('" + parentDefinition.packageName + "', '" + parentDefinition.className + "');\n";
+				buffer += "var " + parentDefinition.className + " = module.import('" + parentDefinition.packageName + "', '" + parentDefinition.className + "');\n";
 			}
 
 			//Create refs for all the other classes
@@ -532,7 +557,7 @@ package com.mcleodgaming.as3js.parser
 				tmpArr = [];
 				for (i in imports)
 				{
-					if (imports[i].indexOf('flash.') < 0 && parent != imports[i].substr(imports[i].lastIndexOf('.') + 1) && packageName + '.' + className != imports[i]) //Ignore flash imports
+					if (!(ignoreFlash && imports[i].indexOf('flash.') >= 0) && parent != imports[i].substr(imports[i].lastIndexOf('.') + 1) && packageName + '.' + className != imports[i]) //Ignore flash imports
 					{
 						// Must be in the filtered map, otherwise no point in writing
 						if (classMapFiltered[packageMap[imports[i]].className])
@@ -552,12 +577,12 @@ package com.mcleodgaming.as3js.parser
 			var injectedText = "";
 			for (i in imports)
 			{
-				if (imports[i].indexOf('flash.') < 0 && packageName + '.' + className != imports[i] && !(parentDefinition && parentDefinition.packageName + '.' + parentDefinition.className == imports[i])) //Ignore flash imports and parent for injections
+				if (!(ignoreFlash && imports[i].indexOf('flash.') >= 0) && packageName + '.' + className != imports[i] && !(parentDefinition && parentDefinition.packageName + '.' + parentDefinition.className == imports[i])) //Ignore flash imports and parent for injections
 				{
 					// Must be in the filtered map, otherwise no point in writing
 					if (classMapFiltered[packageMap[imports[i]].className])
 					{
-						injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = imports('" + packageMap[imports[i]].packageName + "', '" + packageMap[imports[i]].className + "');\n";
+						injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = module.import('" + packageMap[imports[i]].packageName + "', '" + packageMap[imports[i]].className + "');\n";
 					}
 				}
 			}

@@ -2,11 +2,11 @@
 
 ----------
 
-(Note to **v0.1.*** Users: [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs) are no longer dependencies of this project, so take caution when updating to update your initialization proccess);
+**NEW:** **Try AS3JS [live in your browser!](http://www.as3js.org/demo)** 
 
 [http://www.as3js.org](http://www.as3js.org)
 
-AS3JS is a simple command line tool written in Node.js that converts ActionScript 3.0 to vanilla JavaScript (originally based on [ImportJS](https://github.com/Cleod9/importjs)). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a single JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
+AS3JS is a tool written for Node.js that converts ActionScript 3.0 to vanilla JavaScript (originally based on [ImportJS](https://github.com/Cleod9/importjs)). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a standalone JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
 
 So this tool was created with the following goals in mind: 
 
@@ -16,7 +16,7 @@ So this tool was created with the following goals in mind:
 The best part about AS3JS is that even if you aren't familiar with AS3 you can still use this tool with a very small learning curve. The only real difference between AS3JS and normal JS code is what I'd like to call **"outer syntax"**. The majority of your code stays the same, you just need to change what "surrounds" your code. This should hopefully encourage building a much more organized code base in a large application.
 
 
-## Main Features ##
+## Features ##
 
 - Converts ActionScript 3.0 code into readable JavaScript output (Structure based on [ImportJS](https://github.com/Cleod9/importjs))
 - Recursively parses directories for ActionScript files and automatically resolves import dependencies
@@ -28,6 +28,9 @@ The best part about AS3JS is that even if you aren't familiar with AS3 you can s
 - Moderate support for getter/setter methods
 - Mix and match with traditional JS code via the global namespace at your leisure
 - Ultra fast compilation!
+
+### Experimental features ###
+- Allows `require "module_name"` at the package level (do not include semicolon, variable `module_name` will be assigned)
 
 ## Setup Instructions ##
 
@@ -46,13 +49,21 @@ Once installed, then install AS3JS as a global module via your command line:
 $ npm install as3js -g
 ```
 
+If you just want to install as3js into a local project, you can omit the `-g` to run via `./node_modules/.bin/as3js`:
+
+```
+$ npm install as3js
+```
+
 ## Usage ##
 
-AS3JS is run by typing in the command `as3js` in your command-line window. This command has the following parameters:
+### CLI ###
 
-`-o`, `--output`: Path where the output file will be written (e.g. C:\Documents\output.js)
+AS3JS can be run as a CLI via the `as3js` command, which has the following parameters:
 
-`-src`, `--sourcepath`: Comma-delimited list of paths to pull source .as files from. It is expected that this path be the root of your project's package directory. So for example, if you defined a package such as `com.myproject`, you would want this value to be the folder that contains the `com` directory. Remember that AS3JS processes folders recursively, so you only need to put the path to your top-level folders.
+`-o`, `--output`: Path where the output file will be written (e.g. path/to/output.js)
+
+`-src`, `--sourcepath`: Comma-delimited list of paths to pull source .as files from. It is expected that this path be the root of your project's package directory. So for example, if you defined a package such as `com.myproject`, you would want this value to be the folder that contains the `com` directory. Note that AS3JS processes folders recursively, so you only need to put the path to your top-level folders.
 
 `-h`, `--help`: Outputs help information.
 
@@ -60,11 +71,15 @@ AS3JS is run by typing in the command `as3js` in your command-line window. This 
 
 `-s`,`--silent`: Flag to completely silence AS3JS output.
 
-`-v`, `--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
+`--verbose`: Flag to enable verbose output. Use to help debug transpiler errors.
 
 `-d`, `--dry`: Perfoms a dry-run of the compilation. This will perform all of the usual compilation steps but skip writing the final output file.
 
-`-e`, `--entry`: This is the entry package class for your application. Uses the format `[mode]:path.to.package.Class`. You replace `[mode]` with either `"new"` to have AS3JS instantiate the class once your compiled script loads, or `"module"` to have AS3JS return the specified package as a module so may load it with require().
+`-e`, `--entry`: This is the entry package class for your application. Uses the format `[mode]:path.to.package.Class`. You replace `[mode]` with either `"instance"` to have AS3JS instantiate the class once your compiled script loads, or `"static"` to have AS3JS return the class function as-is.
+
+`--safe-require` - Puts a try-catch around require statements. Useful for code that may run in both the browser and Node.js
+
+`--ignore-flash` - Ignores imports of flash.* packages (helps silence errors when porting Flash code)
 
 Here is an example command:
 
@@ -73,11 +88,42 @@ $ as3js -src ./myas3 -o ./output.js -e new:com.example.MyClass
 ```
 
 The above example recursively browses through the directory `myas3` finding all `.as` files, converts them to JS, and finally combines the results into a file called `output.js` in the working directory. This script contains your entire application, and will initialize `MyClass` as your entry point.  Simple as that!
+### Node Script ###
+
+AS3JS can also be initialized manually within a Node.js script like so:
+
+```js
+// Import the compiler
+var AS3JS = require('as3js');
+
+// Instantiate the compiler
+var as3js = new AS3JS();
+var result = as3js.compile({
+  srcPaths: ['./src'], // --sourcepath
+  silent: false, // --silent
+  verbose: false, // --verbose
+  entry: "com.my.App", // Entry point class path
+  entryMode: "instance", // "instance" or "static"
+  safeRequire: false, // --safe-require
+  ignoreFlash: false // --ignore-flash
+  packages: [] // Provide an array of raw text strings to be parsed as "files"
+});
+
+// Gets the compiled source text and do what you want with it
+var sourceText = result.compiledSource;
+
+// Example: Prepending the loader source code to the program
+var as3jslib = fs.readFileSync('node_modules/as3js/lib/as3.js');
+fs.writeFileSync('app.js', as3jslib + '\n' + sourceText, "UTF-8", {flags: 'w+'});
+```
+
+
 
 ## Examples ##
 
-- **[Elevator Engine](https://github.com/cleod9/elevatorjs)** - I wrote this elevator simulator a long time ago in JavaScript and converted it to AS3. What's unique about this one is that the code can also compile to SWF simply by swapping out a single file.
+- **[Live browser demo](http://www.as3js.org/demo)** - Test out AS3JS right in your browser!
 
+- **[Elevator Engine](https://github.com/cleod9/elevatorjs)** - I wrote this elevator simulator a long time ago in JavaScript and converted it to AS3. What's unique about this one is that the code can also compile to SWF simply by swapping out a single file.
 
 ## Limitations ##
 
@@ -190,7 +236,25 @@ Also I would like to note that **this is not an all-in-one solution** like [Flas
 
 Lastly, I fully acknowledge the ActionScript name as the property of [Adobe](http://www.adobe.com/). I do not claim ownership of the language nor do I have any affiliation with Adobe, but I do encourage you to check out the [documentation](http://www.adobe.com/devnet/actionscript/learning.html) if you are unfamiliar with ActionScript 3.0. Just remember that AS3JS is made for JavaScript, so many features of Flash AS3 will not be implemented unless you create them yourself.
 
+## Upgrade Notes ##
+
+**Upgrading from v0.1.**: [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs) are no longer dependencies of this project, so be sure to follow the new setup instructions carefully)
+
+**Upgrading from v0.2.**: AS3JS's responsibilities have been split into two functions: The *compiler*, and the *loader*. The compiler is what converts your AS3 into vanilla JS, but with a few extra features that depend on a separate loader library included in this repo. In browser environments, this is just a matter of using the `./lib/as3.js` as a global script on the page to load your program. For Node.js environments, you'll need to attach AS3JS to the `global` object (details later on below)
+
+
 ## Version History ##
+
+**0.3.***
+
+- Documented the Node.js interface for loading the compiler manually
+- Split AS3JS roles into "compiler" and "program" (while still maintaining mostly vanilla code)
+- Added safeRequire option to allow browser to load code with Node require statements
+- Added ignoreFlash option to ignore **flash.*** packages
+- Fixed several issues with transpiling classes in the top-level package
+- Experimental package-level `require` feature
+- New `packages` option that can be used when compiling directly in Node.js (allows injecting raw text packages into the compiler)
+- Shipped new live editor with 0.3.* support: http://www.as3js.org/demo
 
 **0.2.***
 

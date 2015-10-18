@@ -1,10 +1,13 @@
 {
 	"name": "as3js",
-	"version": "0.2.4",
+	"version": "0.3.0",
 	"author": "Greg McLeod <cleod9@gmail.com>",
-	"description": "AS3 to JS converter for use with ImportJS and OOPS.js.",
+	"description": "AS3 to JS converter.",
 	"bin": {
 		"as3js": "./bin/as3jsc.js"
+	},
+	"devDependencies": {
+		"js-beautify": "1.5.10"
 	},
 	"main": "./index.js",
 	"repository": {

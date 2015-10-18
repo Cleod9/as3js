@@ -1,27 +1,28 @@
 package com.mcleodgaming.as3js
 {
+	import com.mcleodgaming.as3js.parser.AS3Class;
 	import com.mcleodgaming.as3js.parser.AS3Parser;
 	require "path"
 	require "fs"
 	
-	public class AS3JS 
+	public class Main 
 	{
 		public static var DEBUG_MODE:Boolean = false;
 		public static var SILENT:Boolean = false;
 		public static function debug():void
 		{
-			if (AS3JS.SILENT)
+			if (Main.SILENT)
 			{
 				return;
 			}
-			if (AS3JS.DEBUG_MODE)
+			if (Main.DEBUG_MODE)
 			{
 				console.log.apply(console, arguments);
 			}
 		}
 		public static function log():void
 		{
-			if (AS3JS.SILENT)
+			if (Main.SILENT)
 			{
 				return;
 			}
@@ -29,14 +30,14 @@ package com.mcleodgaming.as3js
 		}
 		public static function warn():void
 		{
-			if (AS3JS.SILENT)
+			if (Main.SILENT)
 			{
 				return;
 			}
 			console.warn.apply(console, arguments);
 		}
 		
-		public function AS3JS() 
+		public function Main() 
 		{
 			
 		}
@@ -51,27 +52,43 @@ package com.mcleodgaming.as3js
 			var tmp:String;
 			options = options || {};
 			var srcPaths:Object = options.srcPaths || {};
+			var rawPackages:Array = options.rawPackages || [];
+			var parserOptions:Object = { safeRequire: options.safeRequire, ignoreFlash: options.ignoreFlash};
+			
+			//Temp classes for holding raw class info
+			var rawClass:AS3Class;
+			var rawParser:AS3Parser;
+			
 			var pkgLists:Object = {};
 			for (i in srcPaths)
 			{
 				pkgLists[srcPaths[i]] = buildPackageList(srcPaths[i]);
 			}
 
-			AS3JS.DEBUG_MODE = options.verbose || AS3JS.DEBUG_MODE;
-			AS3JS.SILENT = options.silent || AS3JS.SILENT;
+			Main.DEBUG_MODE = options.verbose || Main.DEBUG_MODE;
+			Main.SILENT = options.silent || Main.SILENT;
 
 			var classes:Object = {};
 			var buffer:String = "";
 			
-			//First, parse through the classes and get the basic information
+			//First, parse through the file-based classes and get the basic information
 			for (i in pkgLists)
 			{
 				for (j in pkgLists[i])
 				{
-					AS3JS.log('Analyzing package: ' + pkgLists[i][j].packageName);
-					classes[pkgLists[i][j].packageName] = pkgLists[i][j].parse();
-					AS3JS.debug(classes[pkgLists[i][j].packageName]);
+					Main.log('Analyzing class path: ' + pkgLists[i][j].classPath);
+					classes[pkgLists[i][j].classPath] = pkgLists[i][j].parse(parserOptions);
+					Main.debug(classes[pkgLists[i][j].classPath]);
 				}
+			}
+			
+			// Now parse through any raw string classes
+			for (i = 0; i < rawPackages.length; i++)
+			{
+				Main.log('Analyzing class: ' + i);
+				rawParser = new AS3Parser(rawPackages[i]);
+				rawClass = rawParser.parse(parserOptions);
+				classes[rawParser.classPath] = rawClass;
 			}
 
 			//Resolve all possible package name wildcards
@@ -80,7 +97,7 @@ package com.mcleodgaming.as3js
 				//For every class
 				for (j in classes[i].importWildcards)
 				{
-					AS3JS.debug('Resolving ' + classes[i].className + '\'s ' + classes[i].importWildcards[j] + ' ...')
+					Main.debug('Resolving ' + classes[i].className + '\'s ' + classes[i].importWildcards[j] + ' ...')
 					//For every wild card in the class
 					for (k in srcPaths)
 					{
@@ -89,7 +106,7 @@ package com.mcleodgaming.as3js
 						tmp = tmp.replace(/\\/g, '/'); 
 						tmp = tmp.replace(/[\/]/g, path.sep); 
 						if(fs.existsSync(tmp)) {
-							AS3JS.debug('Searching path ' + tmp + '...')
+							Main.debug('Searching path ' + tmp + '...')
 							//Path exists, read the files in the directory
 							var files = fs.readdirSync(tmp);
 							for(m in files) {
@@ -97,13 +114,21 @@ package com.mcleodgaming.as3js
 								if(fs.statSync(tmp + path.sep + files[m]).isFile() && files[m].lastIndexOf('.as') == files[m].length - 3) {
 									//See if the class needs the file
 									if(classes[i].needsImport(classes[i].importWildcards[j].replace(/\*/g, files[m].substr(0, files[m].length - 3)))) {
-										AS3JS.debug('Auto imported ' + files[m].substr(0, files[m].length - 3));
+										Main.debug('Auto imported ' + files[m].substr(0, files[m].length - 3));
 										classes[i].addImport(classes[i].importWildcards[j].replace(/\*/g, files[m].substr(0, files[m].length - 3))); //Pass in package name with wild card replaced
 									}
 								}
 							}
 						} else {
-							AS3JS.warn('Warning, could not find directory: ' + tmp);
+							Main.warn('Warning, could not find directory: ' + tmp);
+						}
+					}
+					// Must do again for classes in case there we
+					for (k in classes)
+					{
+						if(classes[i].needsImport(AS3Parser.fixClassPath(classes[k].packageName + '.' + classes[k].className))) {
+							Main.debug('Auto imported ' + AS3Parser.fixClassPath(classes[k].packageName + '.' + classes[k].className));
+							classes[i].addImport(AS3Parser.fixClassPath(classes[k].packageName + '.' + classes[k].className)); //Pass in package name with wild card replaced
 						}
 					}
 				}
@@ -114,7 +139,7 @@ package com.mcleodgaming.as3js
 			{
 				for (j in classes)
 				{
-					classes[i].addExtraImport(classes[j].packageName + '.' + classes[j].className);
+					classes[i].addExtraImport(AS3Parser.fixClassPath(classes[j].packageName + '.' + classes[j].className));
 				}
 			}
 			
@@ -139,12 +164,12 @@ package com.mcleodgaming.as3js
 			//Process the function text to comply with JS
 			for (i in classes)
 			{
-				AS3JS.log('Parsing package: ' + classes[i].packageName + "." + classes[i].className);
+				Main.log('Parsing package: ' + AS3Parser.fixClassPath(classes[i].packageName + "." + classes[i].className));
 				classes[i].process(classes);
 			}
-
-			var mainTemplate:String = fs.readFileSync(path.join(__dirname, 'util', 'main-template.js')).toString();
-			var classTemplate:String = fs.readFileSync(path.join(__dirname, 'util', 'class-template.js')).toString();
+			// Load stringified versions of snippets/main-snippet.js and snippets/class-snippet.js
+			var mainTemplate:String = "(function(){var Program={};{{packages}}if(typeof module !== 'undefined'){module.exports=AS3JS.load({program:Program,entry:\"{{entryPoint}}\",entryMode:\"{{entryMode}}\"});}else if(typeof window!=='undefined'&&typeof AS3JS!=='undefined'){window['{{entryPoint}}']=AS3JS.load({program:Program,entry:\"{{entryPoint}}\",entryMode:\"{{entryMode}}\"});}})();";
+			var classTemplate:String = "Program[\"{{module}}\"]=function(module, exports){{{source}}};";
 			var packageObjects:Array = [];
 			var classObjects:Array = null;
 			var currentClass:String = "";
@@ -152,27 +177,14 @@ package com.mcleodgaming.as3js
 			if (options.entry)
 			{
 				// Entry point should be in the format "mode:path.to.package.Class"
-				var currentPackage:String = options.entry.split(":")[1];
-				var mode:String = "";
-				if (currentPackage) {
-					// Possible modes are "new" and "exports"
-					// In "new" mode, entry point is called via "new" operator
-					// In "exports" mode, entry point is returned as module
-					mode = options.entry.split(":")[0]
-				} else
-				{
-					// Force "new" mode
-					currentPackage = options.entry;
-					mode = "new";
-				}
+				var currentPackage:String = options.entry;
+				var mode:String = options.entryMode || 'instance';
 				// Update template with entry points
-				mainTemplate = mainTemplate.replace(/\{\{entryPackage\}\}/g, classes[currentPackage].packageName);
-				mainTemplate = mainTemplate.replace(/\{\{entryClass\}\}/g, classes[currentPackage].className);
+				mainTemplate = mainTemplate.replace(/\{\{entryPoint\}\}/g, AS3Parser.fixClassPath(classes[currentPackage].packageName + '.' + classes[currentPackage].className));
 				mainTemplate = mainTemplate.replace(/\{\{entryMode\}\}/g, mode);
 			} else
 			{
-				mainTemplate = mainTemplate.replace(/\{\{entryPackage\}\}/g, "");
-				mainTemplate = mainTemplate.replace(/\{\{entryClass\}\}/g, "");
+				mainTemplate = mainTemplate.replace(/\{\{entryPoint\}\}/g, "");
 				mainTemplate = mainTemplate.replace(/\{\{entryMode\}\}/g, "");
 			}
 			
@@ -188,22 +200,22 @@ package com.mcleodgaming.as3js
 				classObjects = [];
 				for (j in groupByPackage[i])
 				{
-					packages[i+"."+groupByPackage[i][j].className] = groupByPackage[i][j].toString();
+					packages[AS3Parser.fixClassPath(i+"."+groupByPackage[i][j].className)] = groupByPackage[i][j].toString();
 					currentClass = classTemplate;
-					currentClass = currentClass.replace(/\{\{className\}\}/g, groupByPackage[i][j].className);
-					currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(packages[i+"."+groupByPackage[i][j].className], "    "));
+					currentClass = currentClass.replace(/\{\{module\}\}/g, AS3Parser.fixClassPath(groupByPackage[i][j].packageName + "." + groupByPackage[i][j].className));
+					currentClass = currentClass.replace(/\{\{source\}\}/g, AS3Parser.increaseIndent(packages[AS3Parser.fixClassPath(i+"."+groupByPackage[i][j].className)], "  "));
 					classObjects.push(currentClass);
 				}
-				packageObjects.push('"' + groupByPackage[i][j].packageName + '": {\n' +  AS3Parser.increaseIndent(classObjects.join(", "), "  ") + "\n}");
+				packageObjects.push(AS3Parser.increaseIndent(classObjects.join(""), "  "));
 			}
 			
-			mainTemplate = mainTemplate.replace(/\{\{packages\}\}/g, AS3Parser.increaseIndent(packageObjects.join(", "), "    "));
+			mainTemplate = mainTemplate.replace(/\{\{packages\}\}/g, packageObjects.join(""));
 			
 			mainTemplate = mainTemplate.replace(/\t/g, "  ");
 			
 			buffer += mainTemplate;
 			
-			AS3JS.log("Done.");
+			Main.log("Done.");
 			
 			return { compiledSource: buffer, packageSources: packages };
 		}
@@ -230,7 +242,7 @@ package com.mcleodgaming.as3js
 					pkg += files[i].substr(0, files[i].length - 3);
 					var f = fs.readFileSync(location + path.sep + files[i]);
 					obj[pkg] = new AS3Parser(f.toString(), pkg);
-					AS3JS.debug("Loaded file: ", location + path.sep + files[i] + " (package: " + pkg + ")");
+					Main.debug("Loaded file: ", location + path.sep + files[i] + " (package: " + pkg + ")");
 				}
 			}
 		}
@@ -243,7 +255,7 @@ package com.mcleodgaming.as3js
 			if (fs.existsSync(location) && fs.statSync(location).isDirectory())
 			{
 				var splitPath = location.split(path.sep);
-				this.readDirectory(location, '', obj);
+				readDirectory(location, '', obj);
 				return obj;
 			} else
 			{

@@ -1,3 +1,3 @@
-var AS3JS = require('./runtime.js');
+global.AS3JS = require('./lib/as3.js');
 
-module.exports = AS3JS;
+module.exports = require('./runtime.js');

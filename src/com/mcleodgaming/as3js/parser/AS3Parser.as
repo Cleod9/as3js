@@ -1,6 +1,6 @@
 package com.mcleodgaming.as3js.parser
 {
-	import com.mcleodgaming.as3js.AS3JS;
+	import com.mcleodgaming.as3js.Main;
 	import com.mcleodgaming.as3js.enums.*;
 	import com.mcleodgaming.as3js.types.*;
 	require "path"
@@ -17,14 +17,18 @@ package com.mcleodgaming.as3js.parser
 		//public var index:int;
 		public var stack:Array;
 		public var src:String;
-		public var packageName:String;
+		public var classPath:String;
+		public var parserOptions:Object;
 			
-		public function AS3Parser(src:String, pkg:String):void 
+		public function AS3Parser(src:String, classPath:String = null):void 
 		{
 			//index = 0;
 			stack = [];
 			this.src = src;
-			packageName = pkg || null;
+			this.classPath = classPath;
+			parserOptions = { };
+			parserOptions.safeRequire = false;
+			parserOptions.ignoreFlash = false;
 		}
 		
 		public static function increaseIndent(str:String, indent:String):String
@@ -55,20 +59,20 @@ package com.mcleodgaming.as3js.parser
 						//This is a ...rest argument, stop here
 						args[args.length-1].name = tmpStr.substr(3);
 						args[args.length-1].isRestParam = true;
-						AS3JS.debug('----->Parsed a ...rest param: ' + args[args.length-1].name);
+						Main.debug('----->Parsed a ...rest param: ' + args[args.length-1].name);
 						break;
 					} else
 					{
 						//Grab the function name
 						tmpToken = AS3Parser.nextWord(tmpStr, 0, AS3Pattern.VARIABLE[0], AS3Pattern.VARIABLE[1]); //Parse out the function name
 						args[args.length-1].name = tmpToken.token; //Set the argument name
-						AS3JS.debug('----->Sub-Function argument found: ' + tmpToken.token);
+						Main.debug('----->Sub-Function argument found: ' + tmpToken.token);
 						//If a colon was next, we'll assume it was typed and grab it
 						if (tmpToken.index < tmpStr.length && tmpStr.charAt(tmpToken.index) == ':')
 						{
 							tmpToken = AS3Parser.nextWord(tmpStr, tmpToken.index, AS3Pattern.VARIABLE_TYPE[0], AS3Pattern.VARIABLE_TYPE[1]); //Parse out the argument type
 							args[args.length-1].type = tmpToken.token; //Set the argument type
-							AS3JS.debug('----->Sub-Function argument typed to: ' + tmpToken.token);
+							Main.debug('----->Sub-Function argument typed to: ' + tmpToken.token);
 						}
 						tmpToken = AS3Parser.nextWord(tmpStr, tmpToken.index, AS3Pattern.ASSIGN_START[0], AS3Pattern.ASSIGN_START[1]);
 						if (tmpToken.token == "=")
@@ -78,7 +82,7 @@ package com.mcleodgaming.as3js.parser
 							//Store value
 							args[args.length-1].value =  tmpExtractArr[0].trim();
 							//Store value
-							AS3JS.debug('----->Sub-Function argument defaulted to: ' + tmpExtractArr[0].trim());
+							Main.debug('----->Sub-Function argument defaulted to: ' + tmpExtractArr[0].trim());
 						}
 					}
 				}
@@ -118,7 +122,7 @@ package com.mcleodgaming.as3js.parser
 				} else if (!innerState && AS3Parser.checkForCommentOpen(src.substr(index, 2)) && !tokenBuffer)
 				{
 					tokenBuffer = null;
-					AS3JS.debug("Entering comment...");
+					Main.debug("Entering comment...");
 					innerState = AS3Parser.checkForCommentOpen(src.substr(index, 2));
 					extraBuffer += src.substr(index, 2);
 					index += 2; //Skip next index
@@ -136,7 +140,7 @@ package com.mcleodgaming.as3js.parser
 								extraBuffer += src.charAt(index);
 							}
 							innerState = null; //Return to previous state
-							AS3JS.debug("Exiting comment...");
+							Main.debug("Exiting comment...");
 							break;
 						} else
 						{
@@ -146,7 +150,7 @@ package com.mcleodgaming.as3js.parser
 				}  else if (!innerState && AS3Parser.checkForStringOpen(src.charAt(index)) && !tokenBuffer)
 				{
 					tokenBuffer = null;
-					AS3JS.debug("Entering string...");
+					Main.debug("Entering string...");
 					innerState = AS3Parser.checkForStringOpen(src.charAt(index));
 					extraBuffer += src.substr(index, 1);
 					index++; //Skip to next index
@@ -163,7 +167,7 @@ package com.mcleodgaming.as3js.parser
 						if (AS3Parser.checkForStringClose(innerState, src.charAt(index)))
 						{
 							innerState = null; //Return to previous state
-							AS3JS.debug("Exiting string...");
+							Main.debug("Exiting string...");
 							break;
 						}
 					}
@@ -201,11 +205,11 @@ package com.mcleodgaming.as3js.parser
 					if (insideComment == '//' && (text.charAt(i) == '\n' || text.charAt(i) == '\r'))
 					{
 						insideComment = null; //End inline comment
-						AS3JS.debug("Exited comment");
+						Main.debug("Exited comment");
 					} else if (insideComment == '/*' && text.charAt(i) == '*' && i + 1 < text.length && text.charAt(i + 1) == '/')
 					{
 						insideComment = null; //End multiline comment
-						AS3JS.debug("Exited comment");
+						Main.debug("Exited comment");
 					}
 				} else if (insideString)
 				{
@@ -232,11 +236,11 @@ package com.mcleodgaming.as3js.parser
 					insideString = text.charAt(i); //Now inside of a string
 				} else if (text.charAt(i) == '/' && i + 1 < text.length && text.charAt(i + 1) == '/')
 				{
-					AS3JS.debug("Entering comment... " + "(//)");
+					Main.debug("Entering comment... " + "(//)");
 					insideComment = '//';
 				} else if (text.charAt(i) == '/' && i + 1 < text.length && text.charAt(i + 1) == '*')
 				{
-					AS3JS.debug("Entering comment..." + "(/*)");
+					Main.debug("Entering comment..." + "(/*)");
 					insideComment = '/*';
 				}
 				if (started)
@@ -273,11 +277,11 @@ package com.mcleodgaming.as3js.parser
 					if (insideComment == '//' && (text.charAt(i) == '\n' || text.charAt(i) == '\r'))
 					{
 						insideComment = null; //End inline comment
-						AS3JS.debug("Exited comment");
+						Main.debug("Exited comment");
 					} else if (insideComment == '/*' && text.charAt(i) == '*' && i + 1 < text.length && text.charAt(i + 1) == '/')
 					{
 						insideComment = null; //End multiline comment
-						AS3JS.debug("Exited comment");
+						Main.debug("Exited comment");
 					}
 				} else if (insideString)
 				{
@@ -297,11 +301,11 @@ package com.mcleodgaming.as3js.parser
 					insideString = text.charAt(i); //Now inside of a string
 				} else if (text.charAt(i) == '/' && i + 1 < text.length && text.charAt(i + 1) == '/')
 				{
-					AS3JS.debug("Entering comment... " + "(//)");
+					Main.debug("Entering comment... " + "(//)");
 					insideComment = '//';
 				} else if (text.charAt(i) == '/' && i + 1 < text.length && text.charAt(i + 1) == '*')
 				{
-					AS3JS.debug("Entering comment..." + "(/*)");
+					Main.debug("Entering comment..." + "(/*)");
 					insideComment = '/*';
 				} else if (text.charAt(i).match(pattern))
 				{
@@ -313,6 +317,11 @@ package com.mcleodgaming.as3js.parser
 			return [buffer, i];
 		}
 		
+		public static function fixClassPath(clsPath:String):String
+		{
+			// Class paths at the root level might accidentally be prepended with a "."
+			return clsPath.replace(/^\./g, "");
+		}
 		public function getState():String
 		{
 			return (this.stack.length > 0) ? this.stack[this.stack.length - 1] : null;
@@ -344,6 +353,8 @@ package com.mcleodgaming.as3js.parser
 				{
 					currToken = AS3Parser.nextWord(src, index, AS3Pattern.OBJECT[0], AS3Pattern.OBJECT[1]); //Package name
 					tmpToken = AS3Parser.nextWord(src, index, AS3Pattern.CURLY_BRACE[0], AS3Pattern.CURLY_BRACE[1]); //Upcoming curly brace
+					
+					
 					index = currToken.index - 1;
 					if (!currToken.token || !tmpToken.token)
 					{
@@ -353,14 +364,15 @@ package com.mcleodgaming.as3js.parser
 						if (tmpToken.index < currToken.index)
 						{
 							cls.packageName = ''; //Curly brace came before next token
+							index = tmpToken.index;
 						} else
 						{
 							cls.packageName = currToken.token; //Just grab the package name
 						}
-						AS3JS.debug('Found package: ' + cls.packageName);
-						cls.importWildcards.push(cls.packageName + '.*'); //Add wild card for its own folder
+						Main.debug('Found package: ' + cls.packageName);
+						cls.importWildcards.push(AS3Parser.fixClassPath(cls.packageName + '.*')); //Add wild card for its own folder
 						stack.push(AS3ParseState.PACKAGE);
-						AS3JS.debug('Attempting to parse package...');
+						Main.debug('Attempting to parse package...');
 					}
 				} else if (getState() == AS3ParseState.PACKAGE)
 				{
@@ -371,15 +383,15 @@ package com.mcleodgaming.as3js.parser
 						if(currToken.token == 'interface')
 							cls.isInterface = true;
 						stack.push(AS3ParseState.CLASS_NAME);
-						AS3JS.debug('Found class keyword...');
+						Main.debug('Found class keyword...');
 					} else if (currToken.token == 'import')
 					{
 						stack.push(AS3ParseState.IMPORT_PACKAGE);
-						AS3JS.debug('Found import keyword...');
+						Main.debug('Found import keyword...');
 					} else if (currToken.token == 'require')
 					{
 						stack.push(AS3ParseState.REQUIRE_MODULE);
-						AS3JS.debug('Found require keyword...');
+						Main.debug('Found require keyword...');
 					}
 				} else if (getState() == AS3ParseState.CLASS_NAME)
 				{
@@ -396,6 +408,10 @@ package com.mcleodgaming.as3js.parser
 					{
 						//Set the class name
 						cls.className = currToken.token;
+						
+						// Update fully qualified class path if needed
+						classPath = classPath || AS3Parser.fixClassPath(cls.packageName + '.' + cls.className); //Remove extra "." for top level packages
+						
 						cls.classMap[cls.className] = cls; //Register self into the import map (used for static detection)
 						//Now we will check for parent class and any interfaces
 						currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
@@ -412,7 +428,7 @@ package com.mcleodgaming.as3js.parser
 							}
 							//Prep the next token
 							currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
-							AS3JS.debug("Found parent: " + cls.parent);
+							Main.debug("Found parent: " + cls.parent);
 						}
 						if (currToken.token == 'implements' && currToken.index < tmpToken.index)
 						{
@@ -421,23 +437,23 @@ package com.mcleodgaming.as3js.parser
 							index = currToken.index;
 							//The token following 'implements' must be an interface
 							cls.interfaces.push(currToken.token);
-							AS3JS.debug("Found interface: " + currToken.token);
+							Main.debug("Found interface: " + currToken.token);
 							currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 							//While we are at a token before the next curly brace
 							while (currToken.index < tmpToken.index && currToken.index < src.length)
 							{
 								//Consider self token another interface being implemented
 								index = currToken.index;
-								AS3JS.debug("Found interface: " + currToken.token);
+								Main.debug("Found interface: " + currToken.token);
 								cls.interfaces.push(currToken.token);
 								currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 								index = currToken.index;
 							}
 						}
-						AS3JS.debug('Parsed class name: ' + cls.className);
+						Main.debug('Parsed class name: ' + cls.className);
 						//Now parsing inside of the class
 						stack.push(AS3ParseState.CLASS);
-						AS3JS.debug('Attempting to parse class...');
+						Main.debug('Attempting to parse class...');
 						
 						//Extract out the next method block
 						AS3Parser.PREVIOUS_BLOCK = cls.className + ":Class";
@@ -455,14 +471,14 @@ package com.mcleodgaming.as3js.parser
 					if (currToken.token == AS3Encapsulation.PUBLIC || currToken.token == AS3Encapsulation.PRIVATE || currToken.token == AS3Encapsulation.PROTECTED)
 					{
 						currMember.encapsulation = currToken.token;
-						AS3JS.debug('->Member encapsulation set to ' + currMember.encapsulation);
+						Main.debug('->Member encapsulation set to ' + currMember.encapsulation);
 					} else if (currToken.token == 'static')
 					{
 						currMember.isStatic = true;
-						AS3JS.debug('-->Static flag set');
+						Main.debug('-->Static flag set');
 					} else if (currToken.token == AS3MemberType.VAR || currToken.token == AS3MemberType.CONST)
 					{
-						AS3JS.debug('--->Member type "variable" set.');
+						Main.debug('--->Member type "variable" set.');
 						currMember = currMember.createVariable(); //Transform the member into a variable
 						stack.push(AS3ParseState.MEMBER_VARIABLE);
 					} else if (currToken.token == AS3MemberType.FUNCTION)
@@ -471,26 +487,26 @@ package com.mcleodgaming.as3js.parser
 						//Check for getter/setter
 						if ((currToken.token == 'get' || currToken.token == 'set') && src[index + 1 + currToken.token.length + 1] != '(')
 						{
-							AS3JS.debug('--->Member sub-type "' + currToken.token + '" set.');
+							Main.debug('--->Member sub-type "' + currToken.token + '" set.');
 							currMember.subType = currToken.token;
 							index = currToken.index - 1;
 						}
 						currMember = currMember.createFunction(); //Transform the member into a function
 						stack.push(AS3ParseState.MEMBER_FUNCTION);
-						AS3JS.debug('---->Member type "function" set.');
+						Main.debug('---->Member type "function" set.');
 					}
 				} else if (getState() == AS3ParseState.MEMBER_VARIABLE)
 				{
 					currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 					currMember.name = currToken.token; //Set the member name
-					AS3JS.debug('---->Variable name declared: ' + currToken.token);
+					Main.debug('---->Variable name declared: ' + currToken.token);
 					index = currToken.index;
 					if (src.charAt(index) == ":")
 					{
 						currToken = AS3Parser.nextWord(src, index, AS3Pattern.VARIABLE_TYPE[0], AS3Pattern.VARIABLE_TYPE[1]);
 						index = currToken.index;
 						currMember.type = currToken.token;//Set the value type name
-						AS3JS.debug('---->Variable type for ' + currMember.name + ' declared as: ' + currToken.token);
+						Main.debug('---->Variable type for ' + currMember.name + ' declared as: ' + currToken.token);
 					}
 					currToken = AS3Parser.nextWord(src, index, AS3Pattern.ASSIGN_START[0], AS3Pattern.ASSIGN_START[1]);
 					if (currToken.token == "=")
@@ -522,7 +538,7 @@ package com.mcleodgaming.as3js.parser
 					currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 					index = currToken.index;
 					currMember.name = currToken.token; //Set the member name
-					AS3JS.debug('****>Function name declared: ' + currToken.token);
+					Main.debug('****>Function name declared: ' + currToken.token);
 					
 					AS3Parser.PREVIOUS_BLOCK = currMember.name + ":Function";
 					tmpArr = AS3Parser.extractBlock(src, index, '(', ')');
@@ -546,18 +562,18 @@ package com.mcleodgaming.as3js.parser
 								//This is a ...rest argument, stop here
 								currMember.argList[currMember.argList.length-1].name = tmpStr.substr(3);
 								currMember.argList[currMember.argList.length-1].isRestParam = true;
-								AS3JS.debug('----->Parsed a ...rest param: ' + currMember.argList[currMember.argList.length-1].name);
+								Main.debug('----->Parsed a ...rest param: ' + currMember.argList[currMember.argList.length-1].name);
 								break;
 							} else
 							{
 								currMember.argList[currMember.argList.length-1].name = tmpToken.token; //Set the argument name
-								AS3JS.debug('----->Function argument found: ' + tmpToken.token);
+								Main.debug('----->Function argument found: ' + tmpToken.token);
 								//If a colon was next, we'll assume it was typed and grab it
 								if (tmpToken.index < tmpStr.length && tmpStr.charAt(tmpToken.index) == ':')
 								{
 									tmpToken = AS3Parser.nextWord(tmpStr, tmpToken.index, AS3Pattern.VARIABLE_TYPE[0], AS3Pattern.VARIABLE_TYPE[1]); //Parse out the argument type
 									currMember.argList[currMember.argList.length-1].type = tmpToken.token; //Set the argument type
-									AS3JS.debug('----->Function argument typed to: ' + tmpToken.token);
+									Main.debug('----->Function argument typed to: ' + tmpToken.token);
 								}
 								tmpToken = AS3Parser.nextWord(tmpStr, tmpToken.index, AS3Pattern.ASSIGN_START[0], AS3Pattern.ASSIGN_START[1]);
 								if (tmpToken.token == "=")
@@ -570,19 +586,19 @@ package com.mcleodgaming.as3js.parser
 									}
 									//Store value
 									currMember.argList[currMember.argList.length-1].value = tmpToken.token.trim();
-									AS3JS.debug('----->Function argument defaulted to: ' + tmpToken.token.trim());
+									Main.debug('----->Function argument defaulted to: ' + tmpToken.token.trim());
 								}
 							}
 						}
 					}
-					AS3JS.debug('------>Completed paring args: ', currMember.argList);
+					Main.debug('------>Completed paring args: ', currMember.argList);
 					//Type the function if needed
 					if (src.charAt(index + 1) == ":")
 					{
 						tmpToken = AS3Parser.nextWord(src, index + 1, AS3Pattern.VARIABLE_TYPE[0], AS3Pattern.VARIABLE_TYPE[1]); //Parse out the function type if needed
 						index = tmpToken.index;
 						currMember.type = tmpToken.token;
-						AS3JS.debug('------>Typed the function to: ', currMember.type);
+						Main.debug('------>Typed the function to: ', currMember.type);
 					}
 
 					
@@ -650,7 +666,7 @@ package com.mcleodgaming.as3js.parser
 						throw new Error("Error parsing import.");
 					} else
 					{
-						AS3JS.debug("Parsed import name: " + currToken.token);
+						Main.debug("Parsed import name: " + currToken.token);
 						if (currToken.token.indexOf("*") >= 0)
 						{
 							cls.importWildcards.push(currToken.token); //To be resolved later
@@ -669,16 +685,26 @@ package com.mcleodgaming.as3js.parser
 					if(!currToken.token)
 						throw new Error("Error parsing require.");
 					else {
-						AS3JS.debug("Parsed require name: " + currToken.token);
+						Main.debug("Parsed require name: " + currToken.token);
 						cls.requires.push(currToken.token.trim());
 						stack.push(AS3ParseState.PACKAGE);
 					}
 				}
 			}
 		}
-		public function parse():AS3Class
+		public function parse(options:Object = null):AS3Class
 		{
-			var classDefinition:AS3Class = new AS3Class();
+			options = options || { };
+			if (typeof options.safeRequire !== 'undefined')
+			{
+				parserOptions.safeRequire = options.safeRequire;
+			}
+			if (typeof options.ignoreFlash !== 'undefined')
+			{
+				parserOptions.ignoreFlash = options.ignoreFlash;
+			}
+			
+			var classDefinition:AS3Class = new AS3Class(parserOptions);
 			stack.splice(0, stack.length);
 			stack.push(AS3ParseState.START);
 			
@@ -686,7 +712,7 @@ package com.mcleodgaming.as3js.parser
 			
 			if (!classDefinition.className)
 			{
-				throw new Error("Error, no class provided for package: " + packageName);
+				throw new Error("Error, no class provided for package: " + classPath);
 			}
 			return classDefinition;
 		}
@@ -707,7 +733,7 @@ package com.mcleodgaming.as3js.parser
 					args += "\n\t\t\tvar " + fn.argList[i].name + " = Array.prototype.slice.call(arguments).splice(" + i + ");";
 				} else if (fn.argList[i].value)
 				{
-					args += "\n\t\t\t" + fn.argList[i].name + " = AS3JSUtils.getDefaultValue(" + fn.argList[i].name + ", " + fn.argList[i].value + ");";
+					args += "\n\t\t\t" + fn.argList[i].name + " = AS3JS.Utils.getDefaultValue(" + fn.argList[i].name + ", " + fn.argList[i].value + ");";
 				}
 			}
 			return fn.value.substr(0, start + 1) + args + fn.value.substr(start + 1);
@@ -1143,7 +1169,7 @@ package com.mcleodgaming.as3js.parser
 				//Replace accordingly
 				if (params.length > 0 && params[0].trim() != '')
 				{
-					text = text.replace(AS3Pattern.VECTOR[1], "AS3JSUtils.createArray(" + params[0] + ", " + val + ")");
+					text = text.replace(AS3Pattern.VECTOR[1], "AS3JS.Utils.createArray(" + params[0] + ", " + val + ")");
 				} else
 				{
 					text = text.replace(AS3Pattern.VECTOR[1], "[]");
@@ -1158,7 +1184,7 @@ package com.mcleodgaming.as3js.parser
 				//Replace accordingly
 				if (params.length > 0 && params[0].trim() != '')
 				{
-					text = text.replace(AS3Pattern.ARRAY[1], "AS3JSUtils.createArray(" + params[0] + ", null)");
+					text = text.replace(AS3Pattern.ARRAY[1], "AS3JS.Utils.createArray(" + params[0] + ", null)");
 				} else
 				{
 					text = text.replace(AS3Pattern.ARRAY[1], "[]");
