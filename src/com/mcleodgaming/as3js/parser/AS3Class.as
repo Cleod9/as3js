@@ -560,7 +560,10 @@ package com.mcleodgaming.as3js.parser
 					if (!(ignoreFlash && imports[i].indexOf('flash.') >= 0) && parent != imports[i].substr(imports[i].lastIndexOf('.') + 1) && packageName + '.' + className != imports[i]) //Ignore flash imports
 					{
 						// Must be in the filtered map, otherwise no point in writing
-						if (classMapFiltered[packageMap[imports[i]].className])
+						if (!packageMap[imports[i]])
+						{
+							Main.warn("Warning, missing class path: " + imports[i] + " (found in " + packageName + '.' + className + ")");
+						} else if (classMapFiltered[packageMap[imports[i]].className])
 						{
 							tmpArr.push(imports[i].substr(imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
 						}
@@ -580,7 +583,10 @@ package com.mcleodgaming.as3js.parser
 				if (!(ignoreFlash && imports[i].indexOf('flash.') >= 0) && packageName + '.' + className != imports[i] && !(parentDefinition && parentDefinition.packageName + '.' + parentDefinition.className == imports[i])) //Ignore flash imports and parent for injections
 				{
 					// Must be in the filtered map, otherwise no point in writing
-					if (classMapFiltered[packageMap[imports[i]].className])
+					if (!packageMap[imports[i]])
+					{
+						Main.warn("Warning, missing class path: " + imports[i] + " (found in " + packageName + '.' + className + ")");
+					} else if (classMapFiltered[packageMap[imports[i]].className])
 					{
 						injectedText += "\t" + imports[i].substr(imports[i].lastIndexOf('.') + 1) + " = module.import('" + packageMap[imports[i]].packageName + "', '" + packageMap[imports[i]].className + "');\n";
 					}

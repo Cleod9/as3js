@@ -236,6 +236,24 @@ Also I would like to note that **this is not an all-in-one solution** like [Flas
 
 Lastly, I fully acknowledge the ActionScript name as the property of [Adobe](http://www.adobe.com/). I do not claim ownership of the language nor do I have any affiliation with Adobe, but I do encourage you to check out the [documentation](http://www.adobe.com/devnet/actionscript/learning.html) if you are unfamiliar with ActionScript 3.0. Just remember that AS3JS is made for JavaScript, so many features of Flash AS3 will not be implemented unless you create them yourself.
 
+## Building Source ##
+
+The source code for AS3JS is written in ActionScript 3 under the `src/` folder, and is also set up as a FlashDevelop project. You can compile the source code one of two ways:
+
+
+- Clicking the Build button in the toolbar of FlashDevelop
+
+OR
+
+- Executing `node build.js` via the command-line
+
+Either of these steps will output a file called `runtime-compiled.js`. Replace `runtime.js` with the contents of `runtime-compiled.js` to update the runtime with your changes.
+
+### Finalizing A Build ###
+
+Since AS3JS's source is written to be compiled by AS3JS itself, if your changes affect the output of compiled files it's important to run the build again and replace `runtime.js` a second AND third time. This ensures that the runtime is using your code as opposed to an outdated runtime. If something is wrong with the build, it will likely fail the third time you attempt to build. It also can't hurt to build a fourth time to ensure the final build is stable.
+
+
 ## Upgrade Notes ##
 
 **Upgrading from v0.1.**: [ImportJS](https://github.com/Cleod9/importjs) and [OOPS.js](https://github.com/Cleod9/oopsjs) are no longer dependencies of this project, so be sure to follow the new setup instructions carefully)
@@ -245,7 +263,11 @@ Lastly, I fully acknowledge the ActionScript name as the property of [Adobe](htt
 
 ## Version History ##
 
-**0.3.***
+**0.3.1**
+- Updated Readme
+- Improved error messaging when class paths are missing
+
+**0.3.0**
 
 - Documented the Node.js interface for loading the compiler manually
 - Split AS3JS roles into "compiler" and "program" (while still maintaining mostly vanilla code)
@@ -273,6 +295,6 @@ Lastly, I fully acknowledge the ActionScript name as the property of [Adobe](htt
 
 ----------
 
-Copyrighted © 2015 by Greg McLeod
+Copyrighted © 2017 by Greg McLeod
 
 GitHub: [https://github.com/cleod9](https://github.com/cleod9)

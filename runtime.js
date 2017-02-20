@@ -825,7 +825,9 @@
           if (!(this.ignoreFlash && this.imports[i].indexOf('flash.') >= 0) && this.parent != this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1) && this.packageName + '.' + this.className != this.imports[i]) //Ignore flash imports
           {
             // Must be in the filtered map, otherwise no point in writing
-            if (this.classMapFiltered[this.packageMap[this.imports[i]].className]) {
+            if (!this.packageMap[this.imports[i]]) {
+              Main.warn("Warning, missing class path: " + this.imports[i] + " (found in " + this.packageName + '.' + this.className + ")");
+            } else if (this.classMapFiltered[this.packageMap[this.imports[i]].className]) {
               tmpArr.push(this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1)); //<-This will return characters after the final '.', or the entire String if no '.'
             }
           }
@@ -842,7 +844,9 @@
         if (!(this.ignoreFlash && this.imports[i].indexOf('flash.') >= 0) && this.packageName + '.' + this.className != this.imports[i] && !(this.parentDefinition && this.parentDefinition.packageName + '.' + this.parentDefinition.className == this.imports[i])) //Ignore flash imports and parent for injections
         {
           // Must be in the filtered map, otherwise no point in writing
-          if (this.classMapFiltered[this.packageMap[this.imports[i]].className]) {
+          if (!this.packageMap[this.imports[i]]) {
+            Main.warn("Warning, missing class path: " + this.imports[i] + " (found in " + this.packageName + '.' + this.className + ")");
+          } else if (this.classMapFiltered[this.packageMap[this.imports[i]].className]) {
             injectedText += "\t" + this.imports[i].substr(this.imports[i].lastIndexOf('.') + 1) + " = module.import('" + this.packageMap[this.imports[i]].packageName + "', '" + this.packageMap[this.imports[i]].className + "');\n";
           }
         }

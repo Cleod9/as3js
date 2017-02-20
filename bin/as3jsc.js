@@ -79,7 +79,7 @@ for(var i = 0; i < process.argv.length; i++) {
 		} else if(arg == '-v' || arg == '--version') {
 			//Version info
 			console.log("AS3JS for Node.js");
-			console.log("Created by Greg McLeod (c) 2015");
+			console.log("Created by Greg McLeod (c) 2017");
 			console.log("Version: " + VERSION);
 			return;
 		}
