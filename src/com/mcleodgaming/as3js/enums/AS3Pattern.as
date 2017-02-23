@@ -14,6 +14,7 @@ package com.mcleodgaming.as3js.enums
 		public static const ASSIGN_UPTO:Array = [ new RegExp("[^;\\r\\n]", "g"), /(.*?)/g ];
 		public static const VECTOR:Array = [ /new[\s\t]+Vector\.<(.*?)>\((.*?)\)/g, /new[\s\t]+Vector\.<(.*?)>\((.*?)\)/ ];
 		public static const ARRAY:Array = [ /new[\s\t]+Array\((.*?)\)/g, /new[\s\t]+Array\((.*?)\)/ ];
+		public static const DICTIONARY:Array = [ /new[\s\t]+Dictionary\((.*?)\)/g ];
 		public static const REST_ARG:Array = [ /\.\.\.[a-zA-Z_$][0-9a-zA-Z_$]*/g, /\.\.\.[a-zA-Z_$][0-9a-zA-Z_$]*/g];
 	}
 }

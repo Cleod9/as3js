@@ -421,11 +421,7 @@ package com.mcleodgaming.as3js.parser
 							currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 							index = currToken.index;
 							//The token following 'extends' must be the parent class
-							/* NOTE: Commenting this out, used to be hard-coding to prevent flash packages from importing  */
-							if ([/*'MovieClip', 'Sprite', 'DisplayObject', 'DisplayObjectContainer'*/].indexOf(currToken.token) < 0)
-							{
-								cls.parent = currToken.token;
-							}
+							cls.parent = currToken.token;
 							//Prep the next token
 							currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
 							Main.debug("Found parent: " + cls.parent);
@@ -1190,10 +1186,17 @@ package com.mcleodgaming.as3js.parser
 					text = text.replace(AS3Pattern.ARRAY[1], "[]");
 				}
 			}
-			//Take care of function binding
+			
+			matches = text.match(AS3Pattern.DICTIONARY[0]);
+			//For each instantiated Dictionary found in the text
+			for (i in matches)
+			{
+				// Replace with empty object
+				text = text.replace(AS3Pattern.DICTIONARY[0], "{}");
+			}
 			
 			//Now cleanup variable types
-			text = text.replace(/([^0-9a-zA-Z_$.])var(\s*[a-zA-Z_$*][0-9a-zA-Z_$.<>]*)\s*:\s*([a-zA-Z_$*][0-9a-zA-Z_$.<>]*)/g, "$1var$2");
+			text = text.replace(/([^0-9a-zA-Z_$.])(?:var|const)(\s*[a-zA-Z_$*][0-9a-zA-Z_$.<>]*)\s*:\s*([a-zA-Z_$*][0-9a-zA-Z_$.<>]*)/g, "$1var$2");
 			
 			return text;
 		}
