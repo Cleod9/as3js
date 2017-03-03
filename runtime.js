@@ -89,6 +89,7 @@
       AS3Pattern.ASSIGN_UPTO = [new RegExp("[^;\\r\\n]", "g"), /(.*?)/g];
       AS3Pattern.VECTOR = [/new[\s\t]+Vector\.<(.*?)>\((.*?)\)/g, /new[\s\t]+Vector\.<(.*?)>\((.*?)\)/];
       AS3Pattern.ARRAY = [/new[\s\t]+Array\((.*?)\)/g, /new[\s\t]+Array\((.*?)\)/];
+      AS3Pattern.DICTIONARY = [/new[\s\t]+Dictionary\((.*?)\)/g];
       AS3Pattern.REST_ARG = [/\.\.\.[a-zA-Z_$][0-9a-zA-Z_$]*/g, /\.\.\.[a-zA-Z_$][0-9a-zA-Z_$]*/g];
     };
 
@@ -106,6 +107,7 @@
     AS3Pattern.ASSIGN_UPTO = null;
     AS3Pattern.VECTOR = null;
     AS3Pattern.ARRAY = null;
+    AS3Pattern.DICTIONARY = null;
     AS3Pattern.REST_ARG = null;
 
     module.exports = AS3Pattern;
@@ -764,10 +766,22 @@
         if (this.members[i] instanceof AS3Function) {
           allFuncs.push(this.members[i]);
         }
+        if (this.members[i] instanceof AS3Variable) {
+          // Fix any obvious assignments that rely on implicit static class name (only works for simple statements)
+          if (this.members[i].value && this.retrieveField(this.members[i].value.replace(/^([a-zA-Z_$][0-9a-zA-Z_$]*)(.*?)$/g, "$1"), true)) {
+            this.members[i].value = this.className + '.' + this.members[i].value;
+          }
+        }
       }
       for (i in this.staticMembers) {
         if (this.staticMembers[i] instanceof AS3Function) {
           allStaticFuncs.push(this.staticMembers[i]);
+        }
+        if (this.staticMembers[i] instanceof AS3Variable) {
+          // Fix any obvious assignments that rely on implicit static class name (only works for simple statements)
+          if (this.staticMembers[i].value && this.retrieveField(this.staticMembers[i].value.replace(/^([a-zA-Z_$][0-9a-zA-Z_$]*)(.*?)$/g, "$1"), true)) {
+            this.staticMembers[i].value = this.className + '.' + this.staticMembers[i].value;
+          }
         }
       }
 
@@ -1612,10 +1626,16 @@
           text = text.replace(AS3Pattern.ARRAY[1], "[]");
         }
       }
-      //Take care of function binding
+
+      matches = text.match(AS3Pattern.DICTIONARY[0]);
+      //For each instantiated Dictionary found in the text
+      for (i in matches) {
+        // Replace with empty object
+        text = text.replace(AS3Pattern.DICTIONARY[0], "{}");
+      }
 
       //Now cleanup variable types
-      text = text.replace(/([^0-9a-zA-Z_$.])var(\s*[a-zA-Z_$*][0-9a-zA-Z_$.<>]*)\s*:\s*([a-zA-Z_$*][0-9a-zA-Z_$.<>]*)/g, "$1var$2");
+      text = text.replace(/([^0-9a-zA-Z_$.])(?:var|const)(\s*[a-zA-Z_$*][0-9a-zA-Z_$.<>]*)\s*:\s*([a-zA-Z_$*][0-9a-zA-Z_$.<>]*)/g, "$1var$2");
 
       return text;
     };
@@ -1703,10 +1723,7 @@
               currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
               index = currToken.index;
               //The token following 'extends' must be the parent class
-              /* NOTE: Commenting this out, used to be hard-coding to prevent flash packages from importing  */
-              if ([ /*'MovieClip', 'Sprite', 'DisplayObject', 'DisplayObjectContainer'*/ ].indexOf(currToken.token) < 0) {
-                cls.parent = currToken.token;
-              }
+              cls.parent = currToken.token;
               //Prep the next token
               currToken = AS3Parser.nextWord(src, index, AS3Pattern.IDENTIFIER[0], AS3Pattern.IDENTIFIER[1]);
               Main.debug("Found parent: " + cls.parent);

@@ -484,12 +484,28 @@ package com.mcleodgaming.as3js.parser
 				{
 					allFuncs.push(members[i]);
 				}
+				if (members[i] instanceof AS3Variable)
+				{
+					// Fix any obvious assignments that rely on implicit static class name (only works for simple statements)
+					if (members[i].value && retrieveField(members[i].value.replace(/^([a-zA-Z_$][0-9a-zA-Z_$]*)(.*?)$/g, "$1"), true))
+					{
+						members[i].value = className + '.' + members[i].value;
+					}
+				}
 			}
 			for (i in staticMembers)
 			{
 				if (staticMembers[i] instanceof AS3Function)
 				{
 					allStaticFuncs.push(staticMembers[i]);
+				}
+				if (staticMembers[i] instanceof AS3Variable)
+				{
+					// Fix any obvious assignments that rely on implicit static class name (only works for simple statements)
+					if (staticMembers[i].value && retrieveField(staticMembers[i].value.replace(/^([a-zA-Z_$][0-9a-zA-Z_$]*)(.*?)$/g, "$1"), true))
+					{
+						staticMembers[i].value = className + '.' + staticMembers[i].value;
+					}
 				}
 			}
 
