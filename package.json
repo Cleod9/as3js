@@ -1,6 +1,6 @@
 {
 	"name": "as3js",
-	"version": "0.3.2",
+	"version": "0.3.3",
 	"author": "Greg McLeod <cleod9@gmail.com>",
 	"description": "AS3 to JS converter.",
 	"bin": {

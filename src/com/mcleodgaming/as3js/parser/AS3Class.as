@@ -73,6 +73,14 @@ package com.mcleodgaming.as3js.parser
 			classMap = { };
 			classMapFiltered = { };
 			packageMap = { };
+			
+			var $init:AS3Function = new AS3Function();
+			$init.name = "$init";
+			$init.value = "{}";
+			$init.type === AS3MemberType.FUNCTION;
+			$init.isStatic = false;
+			members.push($init);
+			registerField($init.name, $init);
 		}
 		public function registerImports(clsList:Object):void
 		{
@@ -319,6 +327,19 @@ package com.mcleodgaming.as3js.parser
 				}
 			}
 			
+			var classMember:AS3Member;
+			// Same logic as checkMembersWithAssignments()
+			// For each member that has an assignment at the top-level scope
+			for (i = 0; i < membersWithAssignments.length; i++)
+			{
+				classMember = membersWithAssignments[i];
+				// Make a dumb attempt to identify use of the class as assignments here
+				if (classMember.value && classMember.value.indexOf(shorthand) >= 0 && !(parentDefinition && parentDefinition.packageName + "." + parentDefinition.className === pkg))
+				{
+					return true;
+				}
+			}
+			
 			return false;
 		}
 		public function addImport(pkg:String):void
@@ -509,16 +530,21 @@ package com.mcleodgaming.as3js.parser
 				}
 			}
 
-			
+			// Insert $init function for instantiations
 			for (i in allFuncs)
 			{
 				Main.debug("Now parsing function: " + className + ":" + allFuncs[i].name);
 				allFuncs[i].value = AS3Parser.parseFunc(this, allFuncs[i].value, allFuncs[i].buildLocalVariableStack(), allFuncs[i].isStatic)[0];
 				allFuncs[i].value = AS3Parser.checkArguments(allFuncs[i]);
-				if (allFuncs[i].name === className)
+				if (allFuncs[i].name === "$init")
 				{
 					//Inject instantiations here
 					allFuncs[i].value = AS3Parser.injectInstantiations(this, allFuncs[i]);
+				}
+				if (allFuncs[i].name === className)
+				{
+					//Inject $init() into constructor
+					allFuncs[i].value = AS3Parser.injectInit(this, allFuncs[i]);
 				}
 				allFuncs[i].value = AS3Parser.cleanup(allFuncs[i].value);
 				//Fix supers
@@ -526,6 +552,7 @@ package com.mcleodgaming.as3js.parser
 				allFuncs[i].value = allFuncs[i].value.replace(/super\(/g, parent + '.call(this, ').replace(/\.call\(this,\s*\)/g, ".call(this)");
 				allFuncs[i].value = allFuncs[i].value.replace(new RegExp("this[.]" + parent, "g"), parent); //Fix extra 'this' on the parent
 			}
+			
 			for (i in allStaticFuncs)
 			{
 				Main.debug("Now parsing static function: " + className + ":" + allStaticFuncs[i].name);
@@ -608,14 +635,6 @@ package com.mcleodgaming.as3js.parser
 					}
 				}
 			}
-			//Set the non-native statics vars now
-			for (i in staticMembers)
-			{
-				if (!(staticMembers[i] instanceof AS3Function))
-				{
-					injectedText += "\t" + AS3Parser.cleanup( className + '.' + staticMembers[i].name + ' = ' + staticMembers[i].value + ";\n");
-				}
-			}
 			
 			if (injectedText.length > 0)
 			{
@@ -623,11 +642,12 @@ package com.mcleodgaming.as3js.parser
 				buffer += injectedText;
 				buffer += "};\n";
 			}
-
+			
 			buffer += '\n';
 			
 			buffer += (fieldMap[className]) ? "var " + stringifyFunc(fieldMap[className]) : "var " + className + " = function " + className + "() {};";
 			
+			buffer += '\n';
 			buffer += '\n';
 			
 			if (parent)
@@ -638,9 +658,10 @@ package com.mcleodgaming.as3js.parser
 			
 			buffer += '\n\n';
 			
+			// Deal with static member assigments
 			if (staticMembers.length > 0)
 			{
-				//Place the static members first (skip the ones that aren't native types, we will import later
+				//Place defaults first
 				for (i in staticMembers)
 				{
 					if (staticMembers[i] instanceof AS3Function)
@@ -671,7 +692,22 @@ package com.mcleodgaming.as3js.parser
 				{
 					buffer += className + "." + stringifyFunc(staticSetters[i]);
 				}
+				
 				buffer += '\n';
+				
+				buffer += className + ".$cinit = function () {\n";
+				
+				// Now do the assignments for the rest
+				for (i in staticMembers)
+				{
+					if (!(staticMembers[i] instanceof AS3Function))
+					{
+						buffer += "\t" + AS3Parser.cleanup( className + '.' + staticMembers[i].name + ' = ' + staticMembers[i].value + ";\n");
+					}
+				}
+				
+				buffer += '\n';
+				buffer += "};\n";
 			}		
 			buffer += "\n";
 			

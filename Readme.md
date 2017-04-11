@@ -1,4 +1,10 @@
-# AS3JS (alpha) #
+# AS3JS (deprecated) #
+
+----------
+
+### NOTICE: Due to lack of interest this project is no longer maintained. ###
+
+I appreciate everyone who starred the project and participated in the discussions. Maybe some day we'll see true strictly typed JavaScript in some other form :)
 
 ----------
 
@@ -262,6 +268,15 @@ Since AS3JS's source is written to be compiled by AS3JS itself, if your changes 
 
 
 ## Version History ##
+
+**0.3.3** (Final build)
+- Added $cinit() and $init() logic to mimic Flash
+- Inferring imports from top-scope member assignments
+
+**0.3.2**
+- Handle dictionary class
+- Const keyword Removal
+- Implicit Static Assignments
 
 **0.3.1**
 - Updated Readme

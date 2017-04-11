@@ -734,7 +734,7 @@ package com.mcleodgaming.as3js.parser
 			}
 			return fn.value.substr(0, start + 1) + args + fn.value.substr(start + 1);
 		}
-		public static function injectInstantiations(cls:AS3Class, fn:AS3Function)
+		public static function injectInstantiations(cls:AS3Class, fn:AS3Function):String
 		{
 			var start:int = fn.value.indexOf('{');
 			var text:String = "";
@@ -746,6 +746,13 @@ package com.mcleodgaming.as3js.parser
 					text += "\n\t\t\tthis." + cls.members[i].name + " = " + cls.members[i].value + ";";
 				}
 			}
+			return fn.value.substr(0, start + 1) + text + fn.value.substr(start + 1);
+		}
+		public static function injectInit(cls:AS3Class, fn:AS3Function):String
+		{
+			var start:int = fn.value.indexOf('{');
+			var text:String = "\n\t\t\tthis.$init();";
+			
 			return fn.value.substr(0, start + 1) + text + fn.value.substr(start + 1);
 		}
 		public static function checkStack(stack:Array, name:String):void
