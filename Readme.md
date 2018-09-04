@@ -8,9 +8,7 @@ I appreciate everyone who starred the project and participated in the discussion
 
 ----------
 
-**NEW:** **Try AS3JS [live in your browser!](http://www.as3js.org/demo)** 
-
-[http://www.as3js.org](http://www.as3js.org)
+**NEW:** **Try AS3JS [live in your browser!](https://jsfiddle.net/cleod9/r1kn2cxf/12/embedded/result)** 
 
 AS3JS is a tool written for Node.js that converts ActionScript 3.0 to vanilla JavaScript (originally based on [ImportJS](https://github.com/Cleod9/importjs)). This allows you to write your code using the standard AS3 package structure, and have it automatically converted into a standalone JavaScript file. There are many IDE's out there that can easily parse ActionScript files, so why would you pass up this chance at smart JS code-completion in a program such as [FlashDevelop](http://www.flashdevelop.org/wikidocs/index.php?title=Features:Completion) or [FDT](http://fdt.powerflasher.com/)? **AS3JS even compiles its own source code from AS3 to JS!** :)
 
@@ -127,7 +125,7 @@ fs.writeFileSync('app.js', as3jslib + '\n' + sourceText, "UTF-8", {flags: 'w+'})
 
 ## Examples ##
 
-- **[Live browser demo](http://www.as3js.org/demo)** - Test out AS3JS right in your browser!
+- **[Live browser demo](https://jsfiddle.net/cleod9/r1kn2cxf/12/embedded/result)** - Test out AS3JS right in your browser!
 
 - **[Elevator Engine](https://github.com/cleod9/elevatorjs)** - I wrote this elevator simulator a long time ago in JavaScript and converted it to AS3. What's unique about this one is that the code can also compile to SWF simply by swapping out a single file.
 
@@ -291,7 +289,7 @@ Since AS3JS's source is written to be compiled by AS3JS itself, if your changes 
 - Fixed several issues with transpiling classes in the top-level package
 - Experimental package-level `require` feature
 - New `packages` option that can be used when compiling directly in Node.js (allows injecting raw text packages into the compiler)
-- Shipped new live editor with 0.3.* support: http://www.as3js.org/demo
+- Shipped new live editor with 0.3.* support: https://jsfiddle.net/cleod9/r1kn2cxf/12/embedded/result
 
 **0.2.***
 
